@@ -1,0 +1,57 @@
+/* Estilos generales del cuerpo */
+body {
+    background-color: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    text-align: center;
+}
+
+/* Tarjeta principal */
+.container {
+    border: 1px solid #30363d;
+    padding: 2rem;
+    border-radius: 12px;
+    background: #161b22;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Tipografía y colores específicos */
+h1 { 
+    color: #58a6ff; 
+    margin-bottom: 0.5rem; 
+}
+
+.status { 
+    font-weight: bold; 
+    color: #3fb950; 
+}
+
+.budget { 
+    font-size: 1.5rem; 
+    margin: 1rem 0; 
+}
+
+.expense {
+    color: #f85149;
+}
+
+/* Estilos del botón (Llamado a la acción) */
+.cta {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 10px 20px;
+    background-color: #238636;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.cta:hover { 
+    background-color: #2ea043; 
+}
