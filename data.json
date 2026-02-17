@@ -1,0 +1,28 @@
+{
+  "version": "0.1-nucleus",
+  "days_elapsed": 1,
+  "financials": {
+    "initial": 20.0,
+    "invested": 9.29,
+    "remaining": 10.71,
+    "status": "PROTECTED"
+  },
+  "logs": [
+    {
+      "timestamp": "2026-02-16 10:00",
+      "id": "001",
+      "msg": "Dominio registrado en Namecheap ($6.79)"
+    },
+    {
+      "timestamp": "2026-02-16 10:05",
+      "id": "002",
+      "msg": "Infraestructura v0.1 configurada ($2.50)"
+    },
+    {
+      "timestamp": "2026-02-16 10:10",
+      "id": "003",
+      "msg": "Núcleo Desacoplado implementado"
+    }
+  ],
+  "evolution_state": "Núcleo estable v0.1 - Todos los sistemas en línea"
+}

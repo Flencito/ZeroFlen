@@ -3,52 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ZeroFlen Lobby v0.1 - Terminal de Observación">
     <title>ZeroFlen</title>
+    
+    <!-- Referencia a CSS externo -->
     <link rel="stylesheet" href="styles.css">
-    <link rel="icon" type="image/png" href="icono-zeroflen.png">
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Proyecto ZeroFlen</h1>
-        <p>Imperio Digital</p>
-        
-        <div class="budget">
-            Presupuesto Inicial: <strong>$20.00</strong><br>
-            Inversión Actual: <span class="expense">$9.29</span>
+        <!-- ============ ERROR CONTAINER ============ -->
+        <div id="error-container">
+            <strong>⚠️ Error:</strong> No se pudo cargar los datos del servidor.
         </div>
         
-        <p class="status">Estado: Configurando infraestructura...</p>
-        <p>Documentando el progreso en vivo.</p>
+        <!-- ============ LOADING INDICATOR ============ -->
+        <div id="loading">
+            <div class="spinner"></div>
+            <div class="spinner-text">Inicializando terminal...</div>
+        </div>
         
-        <a href="https://x.com/FlenKun" target="_blank" rel="noopener noreferrer" class="cta">
-            Sigue el reto en X
-        </a>
+        <!-- ============ HEADER / IDENTIFICADOR ============ -->
+        <div class="header">
+            <div>
+                <div class="header-title">⚡ ZEROFLEN</div>
+                <div class="header-subtitle">Lobby v0.1</div>
+            </div>
+            <div class="badges">
+                <div class="badge" id="version-badge">0.1-nucleus</div>
+                <div class="badge" id="timestamp-badge">--:--:--</div>
+            </div>
+        </div>
+        
+        <!-- ============ SECCIÓN DE ESTADO ============ -->
+        <div class="status-section">
+            <div class="status-item">
+                <div class="status-label">Tiempo Restante</div>
+                <div class="status-value" id="countdown-value">365d 00h 00m 00s</div>
+                <div class="status-sublabel">El dominio expira en 365 días</div>
+            </div>
+            
+            <!-- Los demás items se mantienen igual -->
+            <div class="status-item">
+                <div class="status-label">Presupuesto Restante</div>
+                <div class="status-value" id="budget-value">$20.00</div>
+                <div class="status-sublabel">de $20.00 inicial</div>
+            </div>
+            <!-- ... -->
+        </div>
+        
+        <!-- ============ EVOLUCIÓN ============ -->
+        <div class="evolution-section">
+            <div class="evolution-label">Estado de Evolución</div>
+            <div id="evolution-text">Inicializando...</div>
+        </div>
+        
+        <!-- ============ BITÁCORA / LOGS ============ -->
+        <div class="logs-section">
+            <div class="logs-title">Bitácora de Eventos</div>
+            <div id="log-container">
+                <div class="logs-empty">Sin eventos registrados</div>
+            </div>
+        </div>
+        
+        <!-- ============ ESPACIO INTENCIONAL ============ -->
+        <div class="spacer"></div>
+        
+        <!-- ============ FOOTER / ACCIONES ============ -->
+        <div class="footer">
+            <button class="btn" id="btn-reload" onclick="if(window.zeroFlenUI) window.zeroFlenUI.recargar_datos()">
+                🔄 Recargar
+            </button>
+            <button class="btn" id="btn-status" onclick="if(window.zeroFlenUI) window.zeroFlenUI.mostrar_status()">
+                📊 Estado
+            </button>
+        </div>
     </div>
-<div class="dashboard-grid">
     
-    <div class="stats-card">
-        <h3 class="stats-title">Tiempo Restante</h3>
-        <div id="countdown" class="highlight-value">000d 00h 00m 00s</div>
-        <p class="stats-footer">El dominio expira en 365 días</p>
-    </div>
-
-    <div class="stats-card">
-        <h3 class="stats-title">Desglose del Reto</h3>
-        <div class="stats-row">
-            <span>Restante:</span>
-            <span class="highlight-value">$10.71</span>
-        </div>
-        <hr class="separator">
-        <ul class="stats-list">
-            <li><strong>Dominio:</strong> $6.79 (Namecheap)</li>
-            <li><strong>X Premium:</strong> $2.50 (Oferta 50%)</li>
-            <li><strong>Hosting:</strong> $0.00 (Vercel)</li>
-        </ul>
-    </div>
-
-</div>
-
-<script src="script.js"></script>
+    <!-- ============ SCRIPT ============ -->
+    <script src="script.js"></script>
 </body>
-
 </html>
