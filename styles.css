@@ -4,26 +4,31 @@ body {
     color: #c9d1d9;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
+    flex-direction: column; /* Cambiado a columna para que se apilen mejor en móviles */
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
     text-align: center;
+    gap: 20px; /* Espacio entre los dos cuadros */
 }
 
-/* Tarjeta principal */
-.container {
-    border: 1px solid #30363d;
+/* Estilo unificado para ambas tarjetas */
+.container, .stats-card {
+    background-color: #161b22; /* Color oficial del cuadro azul */
+    border: 1px solid #30363d; /* Borde oficial */
     padding: 2rem;
     border-radius: 12px;
-    background: #161b22;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 400px;
+    width: 90%;
 }
 
 /* Tipografía y colores específicos */
-h1 { 
-    color: #58a6ff; 
-    margin-bottom: 0.5rem; 
+h1, .stats-title { 
+    color: #58a6ff; /* El azul brillante que te gusta */
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
 }
 
 .status { 
@@ -40,10 +45,63 @@ h1 {
     color: #f85149;
 }
 
-/* Estilos del botón (Llamado a la acción) */
+/* Estilo para los datos financieros */
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+.highlight-value {
+    color: #39FF14; /* Verde neón base */
+    font-weight: bold;
+    font-size: 1.5em; /* Un poco más grande para que destaque */
+    
+    /* Efecto de brillo intenso */
+    text-shadow: 
+        0 0 5px #39FF14,
+        0 0 10px #39FF14,
+        0 0 20px rgba(57, 255, 20, 0.6),
+        0 0 30px rgba(57, 255, 20, 0.4);
+        
+    /* Opcional: Una pequeña animación para que el brillo "pulse" */
+    animation: neon-pulse 1.5s infinite alternate;
+}
+
+@keyframes neon-pulse {
+    from {
+        text-shadow: 0 0 5px #39FF14, 0 0 10px #39FF14, 0 0 20px rgba(57, 255, 20, 0.5);
+    }
+    to {
+        text-shadow: 0 0 10px #39FF14, 0 0 20px #39FF14, 0 0 40px rgba(57, 255, 20, 0.8);
+    }
+}
+
+.separator {
+    border: 0;
+    border-top: 1px solid #30363d;
+    margin: 15px 0;
+}
+
+.stats-list {
+    list-style: none;
+    padding: 0;
+    text-align: left; /* Lista alineada a la izquierda para mejor lectura */
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85em;
+    color: #8b949e;
+}
+
+.stats-list li {
+    margin-bottom: 8px;
+}
+
+/* Botón CTA */
 .cta {
     display: inline-block;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     padding: 10px 20px;
     background-color: #238636;
     color: white;
