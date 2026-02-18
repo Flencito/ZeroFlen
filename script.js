@@ -466,9 +466,9 @@
         async cargarProyectos() {
             // Simulación de proyectos (reemplazar con fetch real)
             const proyectos = [
-                { id: 1, name: 'Dominio DNS', category: 'Infraestructura', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=DNS' },
-                { id: 2, name: 'X Premium', category: 'Social', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=X' },
-                { id: 3, name: 'Núcleo', category: 'Core', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=NUCLEO' },
+                { id: 1, name: 'Brighter', category: 'Hazbin Hotel', cover: 'https://youtu.be/eTpEdZoAYbM?si=0KjTSqoIgnHncJa0' },
+                { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', cover: 'https://youtu.be/FxOFYp_ZA8M?si=8eBscKRafUfe6nCg' },
+                { id: 3, name: 'I Cant Control Myself', category: 'Fnaf', cover: 'https://youtu.be/YgiopHEUcqI?si=iSUWDF9cXE3EzFaO' },
                 { id: 4, name: 'Gatekeeper', category: 'Seguridad', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=GATEKEEPER' },
                 { id: 5, name: 'Ranking', category: 'Social', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=RANKING' },
                 { id: 6, name: 'Mutación', category: 'Música', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=MUTACION' },
