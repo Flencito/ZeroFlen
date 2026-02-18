@@ -1,12 +1,11 @@
 /**
- * ZeroFlen v0.2 - Con Supabase (ranking global)
+ * ZeroFlen v0.2 - Con Supabase (ranking global) + Menú y Galería
  */
 
 (function() {
     // --------------------------------------------------------
     // Configuración de Supabase
     // --------------------------------------------------------
-    // 🔴 REEMPLAZA ESTOS VALORES con los de tu proyecto Supabase
     const SUPABASE_URL = 'https://vzfuejudjrztuawlxrpd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6ZnVlanVkanJ6dHVhd2x4cnBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNzgyMzMsImV4cCI6MjA4Njk1NDIzM30.DWpOGLkW3aEW7q3flbX0iGf05Nmd_MiZMo0LWbHX5BY';
 
@@ -32,6 +31,7 @@
     // Utilidades DOM
     // --------------------------------------------------------
     const DOM = {
+        // Lobby
         countdown: document.getElementById('countdown-value'),
         budget: document.getElementById('budget-value'),
         invested: document.getElementById('invested-value'),
@@ -41,6 +41,7 @@
         versionBadge: document.getElementById('version-badge'),
         timestampBadge: document.getElementById('timestamp-badge'),
 
+        // Gatekeeper
         gatekeeperModal: document.getElementById('gatekeeper-modal'),
         nameInput: document.getElementById('observer-name'),
         nameStatus: document.getElementById('name-status'),
@@ -49,12 +50,22 @@
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
 
+        // Ranking
         rankingList: document.getElementById('ranking-list'),
         observerCount: document.getElementById('observer-count'),
         rankingCurrent: document.getElementById('ranking-current'),
-
         btnToggleRanking: document.getElementById('btn-toggle-ranking'),
-        rankingSidebar: document.getElementById('ranking-sidebar')
+        rankingSidebar: document.getElementById('ranking-sidebar'),
+
+        // Menú (nuevo)
+        menuProfileName: document.getElementById('profile-name'),
+        menuColorDot: document.getElementById('profile-color-dot'),
+        btnGaleria: document.getElementById('btn-galeria'),
+        menuPreview: document.getElementById('menu-gallery-preview'),
+
+        // Botones móvil
+        btnToggleRankingMobile: document.getElementById('btn-toggle-ranking-mobile'),
+        btnToggleMenuMobile: document.getElementById('btn-toggle-menu-mobile')
     };
 
     // --------------------------------------------------------
@@ -231,6 +242,9 @@
             currentObserver = observer;
             cerrarGatekeeper();
 
+            // Inicializar menú con el nuevo observador
+            new MenuSidebar(currentObserver);
+
             // Actualizar ranking
             await rankingManager.cargar_ranking();
             // No hacemos checkin adicional porque ya se insertó con accesses=1
@@ -329,8 +343,6 @@
         async registrar_acceso() {
             if (!currentObserver) return;
             try {
-                // Método simple: incrementar accesses en 1 con update directo
-                // Primero obtenemos el valor actual
                 const { data: obs, error: selectError } = await supabaseClient
                     .from('observers')
                     .select('accesses')
@@ -349,7 +361,6 @@
                     if (updateError) throw updateError;
                 }
 
-                // Recargar ranking para reflejar cambios
                 await this.cargar_ranking();
             } catch (error) {
                 console.error('Error en check-in:', error);
@@ -366,6 +377,146 @@
                 clearInterval(this.updateInterval);
                 this.updateInterval = null;
             }
+        }
+    }
+
+    // --------------------------------------------------------
+    // Menú Sidebar
+    // --------------------------------------------------------
+    class MenuSidebar {
+        constructor(observer) {
+            this.observer = observer;
+            this.actualizarPerfil();
+            DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
+            this.cargarPreview();
+        }
+
+        actualizarPerfil() {
+            if (this.observer) {
+                DOM.menuProfileName.textContent = this.observer.name;
+                DOM.menuColorDot.style.color = this.observer.color;
+                DOM.menuColorDot.style.backgroundColor = this.observer.color;
+            } else {
+                DOM.menuProfileName.textContent = 'Invitado';
+                DOM.menuColorDot.style.backgroundColor = '#39FF14';
+            }
+        }
+
+        async cargarPreview() {
+            // Simulación de proyectos (reemplazar con fetch real si existe endpoint)
+            const proyectos = [
+                { id: 1, name: 'Dominio DNS', category: 'Infraestructura', cover: 'https://via.placeholder.com/150/0d1117/39FF14?text=DNS' },
+                { id: 2, name: 'X Premium', category: 'Social', cover: 'https://via.placeholder.com/150/0d1117/39FF14?text=X' },
+                { id: 3, name: 'Núcleo', category: 'Core', cover: 'https://via.placeholder.com/150/0d1117/39FF14?text=NUCLEO' }
+            ];
+            DOM.menuPreview.innerHTML = proyectos.map(p => `
+                <div class="gallery-card preview-card" data-id="${p.id}">
+                    <div class="card-image-wrapper">
+                        <img src="${p.cover}" alt="${p.name}" class="card-image" loading="lazy">
+                        <div class="card-info">
+                            <p class="card-title">${p.name}</p>
+                            <p class="card-subtitle">${p.category}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        abrirGaleria() {
+            const galeria = new GaleriaModal();
+            galeria.abrir();
+        }
+    }
+
+    // --------------------------------------------------------
+    // Galería Modal
+    // --------------------------------------------------------
+    class GaleriaModal {
+        constructor() {
+            this.modal = null;
+        }
+
+        abrir() {
+            this.crearModal();
+            setTimeout(() => this.modal.classList.add('visible'), 10);
+        }
+
+        crearModal() {
+            const html = `
+                <div id="galeria-modal" class="galeria-modal">
+                    <div class="galeria-overlay"></div>
+                    <div class="galeria-container">
+                        <div class="galeria-header">
+                            <h2>🎵 MUTACIÓN MÚSICA - GALERÍA</h2>
+                            <button class="btn-close-galeria">✕</button>
+                        </div>
+                        <div class="galeria-grid" id="galeria-content"></div>
+                        <div class="galeria-footer">
+                            <button class="btn-volver">◄ VOLVER AL LOBBY</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            this.modal = document.getElementById('galeria-modal');
+            this.cargarProyectos();
+            this.agregarEventos();
+        }
+
+        async cargarProyectos() {
+            // Simulación de proyectos (reemplazar con fetch real)
+            const proyectos = [
+                { id: 1, name: 'Dominio DNS', category: 'Infraestructura', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=DNS' },
+                { id: 2, name: 'X Premium', category: 'Social', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=X' },
+                { id: 3, name: 'Núcleo', category: 'Core', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=NUCLEO' },
+                { id: 4, name: 'Gatekeeper', category: 'Seguridad', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=GATEKEEPER' },
+                { id: 5, name: 'Ranking', category: 'Social', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=RANKING' },
+                { id: 6, name: 'Mutación', category: 'Música', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=MUTACION' },
+                { id: 7, name: 'Neon Breath', category: 'Arte', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=NEON' },
+                { id: 8, name: 'ZeroFlen', category: 'Core', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=ZEROFLEN' }
+            ];
+            const grid = document.getElementById('galeria-content');
+            grid.innerHTML = proyectos.map(p => `
+                <div class="gallery-card" data-project-id="${p.id}">
+                    <div class="card-image-wrapper">
+                        <img src="${p.cover}" alt="${p.name}" class="card-image" loading="lazy" />
+                        <div class="card-overlay">
+                            <button class="decode-btn" data-project-id="${p.id}">[ INICIAR DECODIFICACIÓN ]</button>
+                        </div>
+                        <div class="card-info">
+                            <p class="card-title">${p.name}</p>
+                            <p class="card-subtitle">${p.category}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        agregarEventos() {
+            this.modal.querySelector('.btn-close-galeria').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.btn-volver').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.galeria-overlay').addEventListener('click', () => this.cerrar());
+            this.modal.querySelectorAll('.decode-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.projectId;
+                    this.decodificar(id);
+                });
+            });
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+            setTimeout(() => {
+                this.modal.remove();
+            }, 500);
+        }
+
+        decodificar(projectId) {
+            alert(`Decodificando proyecto ${projectId} (función simulada)`);
+            this.cerrar();
+            // Aquí puedes redirigir a una página específica si lo deseas
+            // window.location.href = `/project/${projectId}`;
         }
     }
 
@@ -458,12 +609,9 @@
         if (stored) {
             try {
                 currentObserver = JSON.parse(stored);
-                // Si hay usuario, no mostrar Gatekeeper
                 DOM.gatekeeperModal.classList.remove('active');
-                // Inicializar ranking
                 await rankingManager.cargar_ranking();
                 rankingManager.start_auto_update();
-                // Hacer check-in (incrementar acceso)
                 await rankingManager.registrar_acceso();
             } catch (e) {
                 console.warn('Error al parsear localStorage, limpiando...', e);
@@ -471,13 +619,10 @@
                 abrirGatekeeper();
             }
         } else {
-            // No hay usuario, mostrar Gatekeeper
             abrirGatekeeper();
-            // Inicializar componentes del Gatekeeper
             nameValidator = new NameValidator();
             colorSelector = new ColorSelector();
 
-            // Eventos
             DOM.nameInput.addEventListener('input', async (e) => {
                 const nombre = e.target.value.trim();
                 DOM.previewName.textContent = nombre || 'Ingresa tu nombre';
@@ -490,7 +635,22 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
-        // Móvil: toggle ranking
+        // Crear menú (puede ser con o sin observer)
+        const menu = new MenuSidebar(currentObserver);
+
+        // Listeners para botones móviles
+        if (DOM.btnToggleRankingMobile) {
+            DOM.btnToggleRankingMobile.addEventListener('click', () => {
+                DOM.rankingSidebar.classList.toggle('visible');
+            });
+        }
+        if (DOM.btnToggleMenuMobile) {
+            DOM.btnToggleMenuMobile.addEventListener('click', () => {
+                document.querySelector('.menu-sidebar').classList.toggle('visible');
+            });
+        }
+
+        // Móvil: toggle ranking (botón antiguo, lo dejamos por compatibilidad)
         if (DOM.btnToggleRanking) {
             DOM.btnToggleRanking.addEventListener('click', () => {
                 DOM.rankingSidebar.classList.toggle('visible');

@@ -27,9 +27,7 @@
                 <!-- Color -->
                 <div class="form-group">
                     <label class="label">FIRMA CROMÁTICA</label>
-                    <div class="color-palette" id="color-palette">
-                        <!-- Se generan con JS, pero podemos ponerlos fijos también -->
-                    </div>
+                    <div class="color-palette" id="color-palette"></div>
                     <p id="color-name" class="color-name">Selecciona un color</p>
                 </div>
                 <!-- Preview -->
@@ -46,26 +44,23 @@
         </div>
     </div>
 
-    <!-- ============ LAYOUT PRINCIPAL ============ -->
-    <div class="main-layout">
-        <!-- SIDEBAR RANKING -->
+    <!-- ============ LAYOUT PRINCIPAL (3 COLUMNAS) ============ -->
+    <div class="zeroflen-layout">
+        <!-- COLUMNA 1: RANKING -->
         <aside id="ranking-sidebar" class="ranking-sidebar">
             <div class="ranking-header">
                 <h3 class="ranking-title">OBSERVADORES</h3>
                 <p class="ranking-count" id="observer-count">#0 activos</p>
             </div>
             <div class="ranking-list" id="ranking-list">
-                <!-- JS rellena -->
                 <div class="ranking-entry">Cargando...</div>
             </div>
             <div class="ranking-divider"></div>
-            <div class="ranking-current" id="ranking-current">
-                <!-- JS rellena -->
-            </div>
+            <div class="ranking-current" id="ranking-current"></div>
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL (LOBBY v0.1) -->
-        <main class="lobby-content">
+        <!-- COLUMNA 2: LOBBY -->
+        <main id="lobby-main" class="lobby-main">
             <div class="container">
                 <!-- Header -->
                 <div class="header">
@@ -124,11 +119,29 @@
                 </div>
             </div>
         </main>
+
+        <!-- COLUMNA 3: MENÚ -->
+        <aside id="menu-sidebar" class="menu-sidebar">
+            <div class="menu-header">
+                <button class="profile-btn" id="profile-btn">
+                    <span class="profile-name" id="profile-name">Flen</span>
+                    <span class="profile-color-dot" id="profile-color-dot"></span>
+                </button>
+                <div class="menu-actions">
+                    <button class="action-btn" id="btn-new">+</button>
+                    <button class="action-btn" id="btn-menu">⋯</button>
+                </div>
+            </div>
+            <button class="btn-galeria" id="btn-galeria">🎵 MUTACIÓN MÚSICA</button>
+            <div class="menu-gallery-preview" id="menu-gallery-preview"></div>
+        </aside>
     </div>
 
-    <!-- Botón para móvil (mostrar ranking) -->
-    <button id="btn-toggle-ranking" class="btn-toggle-ranking">📊</button>
+    <!-- BOTONES FLOTANTES PARA MÓVIL -->
+    <button id="btn-toggle-ranking-mobile" class="btn-toggle-ranking-mobile">📊</button>
+    <button id="btn-toggle-menu-mobile" class="btn-toggle-menu-mobile">🎵</button>
 
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>
