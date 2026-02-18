@@ -721,11 +721,14 @@ body {
 }
 
 /* ============ RESPONSIVE ============ */
+/* ============ RESPONSIVE MEJORADO PARA MÓVIL ============ */
 @media (max-width: 768px) {
+    /* Cambiamos a una sola columna */
     .main-layout {
         flex-direction: column;
     }
 
+    /* Sidebar oculto por defecto, se despliega con botón */
     .ranking-sidebar {
         position: fixed;
         left: -260px;
@@ -741,24 +744,138 @@ body {
         left: 0;
     }
 
+    /* Botón flotante para mostrar el ranking */
     .btn-toggle-ranking {
         display: block;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        border: none;
+        color: var(--color-darker);
+        font-size: 1.5rem;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 0 20px var(--color-primary);
     }
 
+    /* Ajustes del contenido principal */
     .lobby-content {
-        padding: 20px;
-        max-height: none;
+        padding: 20px 15px;  /* Reducimos el padding */
         width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
     }
 
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    /* Cabecera */
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .header-title {
+        font-size: 1.5rem;  /* Título más pequeño */
+    }
+
+    .badges {
+        align-self: flex-end;
+    }
+
+    /* Sección de estado: 2 columnas en móvil (o 1 si es muy pequeño) */
     .status-section {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 15px;
         padding: 20px;
+    }
+
+    .status-value {
+        font-size: 1.2rem;  /* Valores más pequeños */
+    }
+
+    /* Logs: ajustamos las columnas */
+    .log-entry {
+        grid-template-columns: 90px 30px 1fr;
+        gap: 6px;
+        font-size: 0.75rem;
+    }
+
+    .log-timestamp {
+        font-size: 0.7rem;
+    }
+
+    .log-id {
+        font-size: 0.7rem;
+    }
+
+    .log-msg {
+        font-size: 0.7rem;
+    }
+
+    /* Footer */
+    .footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 12px;
+    }
+
+    /* Gatekeeper: más compacto */
+    .gatekeeper-container {
+        padding: 25px 20px;
+        max-width: 95%;
+    }
+
+    .gatekeeper-title {
+        font-size: 1.5rem;
+    }
+
+    .preview-name {
+        font-size: 1.5rem;
+    }
+
+    .color-palette {
+        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+        gap: 8px;
+    }
+
+    .color-btn {
+        padding: 6px;
+        font-size: 0.6rem;
+    }
+
+    .color-circle {
+        width: 25px;
+        height: 25px;
+    }
+}
+
+/* Pantallas muy pequeñas (menos de 400px) */
+@media (max-width: 400px) {
+    .status-section {
+        grid-template-columns: 1fr;  /* Una sola columna */
     }
 
     .log-entry {
-        grid-template-columns: 100px 30px 1fr;
-        gap: 8px;
+        grid-template-columns: 1fr;  /* Apilamos los logs */
+        gap: 4px;
+        padding: 8px;
+    }
+
+    .log-timestamp, .log-id, .log-msg {
+        text-align: left;
     }
 }
 
