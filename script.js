@@ -1,11 +1,20 @@
 /**
- * ZeroFlen v0.2 - Versión para hosting estático (sin backend)
- * Todo funciona con localStorage.
+ * ZeroFlen v0.2 - Con Supabase (ranking global)
  */
 
 (function() {
     // --------------------------------------------------------
-    // Configuración
+    // Configuración de Supabase
+    // --------------------------------------------------------
+    // 🔴 REEMPLAZA ESTOS VALORES con los de tu proyecto Supabase
+    const SUPABASE_URL = 'https://vzfuejudjrztuawlxrpd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6ZnVlanVkanJ6dHVhd2x4cnBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNzgyMzMsImV4cCI6MjA4Njk1NDIzM30.DWpOGLkW3aEW7q3flbX0iGf05Nmd_MiZMo0LWbHX5BY';
+
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --------------------------------------------------------
+    // Datos de respaldo para el lobby
     // --------------------------------------------------------
     const FALLBACK_DATA = {
         version: '0.2-nucleus',
@@ -20,7 +29,7 @@
     };
 
     // --------------------------------------------------------
-    // Utilidades DOM (igual que antes)
+    // Utilidades DOM
     // --------------------------------------------------------
     const DOM = {
         countdown: document.getElementById('countdown-value'),
@@ -49,70 +58,15 @@
     };
 
     // --------------------------------------------------------
-    // "Base de datos" simulada en localStorage
+    // Estado global
     // --------------------------------------------------------
-    function getObserversDB() {
-        const stored = localStorage.getItem('observers_db');
-        if (stored) {
-            return JSON.parse(stored);
-        } else {
-            // Datos de ejemplo para que no esté vacío
-            const defaultDB = [
-                { name: 'AlphaVortex42', color: '#39FF14', country: '🇺🇸', accesses: 5 },
-                { name: 'SilverNeon', color: '#00FFFF', country: '🇩🇪', accesses: 3 }
-            ];
-            localStorage.setItem('observers_db', JSON.stringify(defaultDB));
-            return defaultDB;
-        }
-    }
-
-    function saveObserversDB(db) {
-        localStorage.setItem('observers_db', JSON.stringify(db));
-    }
-
-    function findObserver(name) {
-        const db = getObserversDB();
-        return db.find(obs => obs.name === name);
-    }
-
-    function addObserver(name, color, country) {
-        const db = getObserversDB();
-        if (db.find(obs => obs.name === name)) return false;
-        db.push({
-            name: name,
-            color: color,
-            country: country,
-            accesses: 1
-        });
-        saveObserversDB(db);
-        return true;
-    }
-
-    function incrementAccess(name) {
-        const db = getObserversDB();
-        const obs = db.find(o => o.name === name);
-        if (obs) {
-            obs.accesses += 1;
-            saveObserversDB(db);
-            return obs.accesses;
-        }
-        return null;
-    }
-
-    function getRanking() {
-        const db = getObserversDB();
-        const sorted = [...db].sort((a, b) => b.accesses - a.accesses);
-        return sorted.map((obs, index) => ({
-            rank: index + 1,
-            name: obs.name,
-            color: obs.color,
-            country: obs.country,
-            accesses: obs.accesses
-        }));
-    }
+    let currentObserver = null; // { name, color, country }
+    let rankingManager = null;
+    let nameValidator = null;
+    let colorSelector = null;
 
     // --------------------------------------------------------
-    // NameValidator (sin fetch)
+    // NameValidator con debounce (consulta Supabase)
     // --------------------------------------------------------
     class NameValidator {
         constructor() {
@@ -123,33 +77,51 @@
         }
 
         validar_formato(nombre) {
-            if (!nombre || nombre.length < this.minLength) return { valid: false, msg: 'Mínimo 3 caracteres' };
-            if (!this.pattern.test(nombre)) return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
+            if (!nombre || nombre.length < this.minLength) {
+                return { valid: false, msg: 'Mínimo 3 caracteres' };
+            }
+            if (!this.pattern.test(nombre)) {
+                return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
+            }
             return { valid: true, msg: '' };
         }
 
-        validar_unicidad(nombre) {
-            const exists = findObserver(nombre) !== undefined;
-            return {
-                valid: !exists,
-                msg: exists ? '❌ Nombre ya existe' : '✅ Nombre disponible'
-            };
+        async validar_unicidad(nombre) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('observers')
+                    .select('name')
+                    .eq('name', nombre)
+                    .maybeSingle();
+
+                if (error) throw error;
+                const exists = data !== null;
+                return {
+                    valid: !exists,
+                    msg: exists ? '❌ Nombre ya existe' : '✅ Nombre disponible'
+                };
+            } catch (error) {
+                console.error('Error validando unicidad:', error);
+                return { valid: false, msg: 'Error al validar' };
+            }
         }
 
-        validar_con_debounce(nombre) {
+        async validar_con_debounce(nombre) {
             clearTimeout(this.debounceTimer);
             const formatoOk = this.validar_formato(nombre);
-            if (!formatoOk.valid) return Promise.resolve(formatoOk);
+            if (!formatoOk.valid) return formatoOk;
+
             return new Promise(resolve => {
-                this.debounceTimer = setTimeout(() => {
-                    resolve(this.validar_unicidad(nombre));
+                this.debounceTimer = setTimeout(async () => {
+                    const unicidadOk = await this.validar_unicidad(nombre);
+                    resolve(unicidadOk);
                 }, 500);
             });
         }
     }
 
     // --------------------------------------------------------
-    // ColorSelector (genera los botones)
+    // ColorSelector
     // --------------------------------------------------------
     class ColorSelector {
         constructor() {
@@ -217,6 +189,7 @@
         const nombre = DOM.nameInput.value.trim();
         const color = colorSelector.selected.hex;
 
+        // Geolocalización
         let country = '🏳️';
         try {
             const ipRes = await fetch('https://ipapi.co/json/');
@@ -228,27 +201,46 @@
                 );
             }
         } catch (e) {
-            console.warn('Geolocalización falló');
+            console.warn('Geolocalización falló, usando bandera por defecto');
         }
 
         DOM.btnEnter.classList.add('loading');
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
-        const success = addObserver(nombre, color, country);
-        if (success) {
+        try {
+            // Insertar nuevo observador en Supabase
+            const { data, error } = await supabaseClient
+                .from('observers')
+                .insert([
+                    { name: nombre, color: color, country: country, accesses: 1 }
+                ])
+                .select();
+
+            if (error) {
+                if (error.code === '23505') { // unique violation
+                    alert('Error: el nombre ya existe');
+                } else {
+                    alert('Error al registrar: ' + error.message);
+                }
+                return;
+            }
+
+            // Guardar en localStorage
             const observer = { name: nombre, color: color, country: country };
             localStorage.setItem('observer', JSON.stringify(observer));
             currentObserver = observer;
             cerrarGatekeeper();
 
-            rankingManager.cargar_ranking();
-            rankingManager.registrar_acceso(); // incrementa a 2? (ya se puso 1 en addObserver)
-        } else {
-            alert('Error: el nombre ya existe');
-        }
+            // Actualizar ranking
+            await rankingManager.cargar_ranking();
+            // No hacemos checkin adicional porque ya se insertó con accesses=1
 
-        DOM.btnEnter.classList.remove('loading');
-        DOM.btnEnter.innerHTML = '🚀 ACCEDER AL LOBBY';
+        } catch (error) {
+            alert('Error de conexión');
+        } finally {
+            DOM.btnEnter.classList.remove('loading');
+            DOM.btnEnter.innerHTML = '🚀 ACCEDER AL LOBBY';
+        }
     }
 
     function cerrarGatekeeper() {
@@ -260,7 +252,7 @@
     }
 
     // --------------------------------------------------------
-    // RankingManager (simulado con localStorage)
+    // RankingManager (con Supabase)
     // --------------------------------------------------------
     class RankingManager {
         constructor() {
@@ -268,11 +260,25 @@
             this.updateInterval = null;
         }
 
-        cargar_ranking() {
-            this.observers = getRanking();
-            this.render_ranking();
-            if (currentObserver) {
-                this.actualizar_observador_actual();
+        async cargar_ranking() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('observers')
+                    .select('name, color, country, accesses')
+                    .order('accesses', { ascending: false });
+
+                if (error) throw error;
+
+                this.observers = data.map((obs, index) => ({
+                    rank: index + 1,
+                    ...obs
+                }));
+                this.render_ranking();
+                if (currentObserver) {
+                    this.actualizar_observador_actual();
+                }
+            } catch (error) {
+                console.error('Error cargando ranking:', error);
             }
         }
 
@@ -299,8 +305,6 @@
         actualizar_observador_actual() {
             const obs = this.observers.find(o => o.name === currentObserver.name);
             if (obs) {
-                currentObserver.accesses = obs.accesses;
-                currentObserver.rank = obs.rank;
                 const html = `
                     <p class="current-label">TÚ ERES:</p>
                     <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
@@ -311,15 +315,44 @@
                     </div>
                 `;
                 DOM.rankingCurrent.innerHTML = html;
+            } else {
+                DOM.rankingCurrent.innerHTML = `
+                    <p class="current-label">TÚ ERES:</p>
+                    <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
+                    <div class="current-details">
+                        <p>Esperando datos...</p>
+                    </div>
+                `;
             }
         }
 
-        registrar_acceso() {
+        async registrar_acceso() {
             if (!currentObserver) return;
-            const accesses = incrementAccess(currentObserver.name);
-            if (accesses) {
-                currentObserver.accesses = accesses;
-                this.cargar_ranking();
+            try {
+                // Método simple: incrementar accesses en 1 con update directo
+                // Primero obtenemos el valor actual
+                const { data: obs, error: selectError } = await supabaseClient
+                    .from('observers')
+                    .select('accesses')
+                    .eq('name', currentObserver.name)
+                    .single();
+
+                if (selectError) throw selectError;
+
+                if (obs) {
+                    const newAccesses = obs.accesses + 1;
+                    const { error: updateError } = await supabaseClient
+                        .from('observers')
+                        .update({ accesses: newAccesses, last_access: new Date() })
+                        .eq('name', currentObserver.name);
+
+                    if (updateError) throw updateError;
+                }
+
+                // Recargar ranking para reflejar cambios
+                await this.cargar_ranking();
+            } catch (error) {
+                console.error('Error en check-in:', error);
             }
         }
 
@@ -345,6 +378,7 @@
             const data = await response.json();
             renderLobby(data);
         } catch (error) {
+            console.warn('Error cargando data.json, usando fallback:', error);
             renderLobby(FALLBACK_DATA);
         }
     }
@@ -375,7 +409,7 @@
     }
 
     // Contador regresivo
-    const EXPIRATION_DATE = new Date(2027, 1, 16);
+    const EXPIRATION_DATE = new Date(2027, 1, 16); // 16 feb 2027
     function updateCountdown() {
         const now = new Date();
         const diff = EXPIRATION_DATE - now;
@@ -398,12 +432,8 @@
     // --------------------------------------------------------
     // Inicialización
     // --------------------------------------------------------
-    let currentObserver = null;
-    let colorSelector = null;
-    let rankingManager = null;
-    let nameValidator = null;
-
     async function init() {
+        // Exponer funciones para botones
         window.zeroFlenUI = {
             recargar_datos: loadLobbyData,
             mostrar_status: () => {
@@ -413,26 +443,41 @@
             }
         };
 
+        // Iniciar contadores
         updateCountdown();
         setInterval(updateCountdown, 1000);
         setInterval(updateTimestampBadge, 1000);
 
+        // Cargar datos del lobby
         await loadLobbyData();
 
         rankingManager = new RankingManager();
 
+        // Verificar localStorage
         const stored = localStorage.getItem('observer');
         if (stored) {
-            currentObserver = JSON.parse(stored);
-            DOM.gatekeeperModal.classList.remove('active');
-            rankingManager.cargar_ranking();
-            rankingManager.start_auto_update();
-            rankingManager.registrar_acceso();
+            try {
+                currentObserver = JSON.parse(stored);
+                // Si hay usuario, no mostrar Gatekeeper
+                DOM.gatekeeperModal.classList.remove('active');
+                // Inicializar ranking
+                await rankingManager.cargar_ranking();
+                rankingManager.start_auto_update();
+                // Hacer check-in (incrementar acceso)
+                await rankingManager.registrar_acceso();
+            } catch (e) {
+                console.warn('Error al parsear localStorage, limpiando...', e);
+                localStorage.removeItem('observer');
+                abrirGatekeeper();
+            }
         } else {
+            // No hay usuario, mostrar Gatekeeper
             abrirGatekeeper();
+            // Inicializar componentes del Gatekeeper
             nameValidator = new NameValidator();
             colorSelector = new ColorSelector();
 
+            // Eventos
             DOM.nameInput.addEventListener('input', async (e) => {
                 const nombre = e.target.value.trim();
                 DOM.previewName.textContent = nombre || 'Ingresa tu nombre';
@@ -445,6 +490,7 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
+        // Móvil: toggle ranking
         if (DOM.btnToggleRanking) {
             DOM.btnToggleRanking.addEventListener('click', () => {
                 DOM.rankingSidebar.classList.toggle('visible');
