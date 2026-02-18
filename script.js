@@ -1,15 +1,12 @@
 /**
- * ZeroFlen v0.2 - UI Controller with Gatekeeper and Ranking
+ * ZeroFlen v0.2 - Versión para hosting estático (sin backend)
+ * Todo funciona con localStorage.
  */
 
 (function() {
     // --------------------------------------------------------
     // Configuración
     // --------------------------------------------------------
-    const API_BASE = ''; // asumiendo mismo origen
-    const FETCH_TIMEOUT = 3000;
-
-    // Datos de respaldo (fallback) para el lobby
     const FALLBACK_DATA = {
         version: '0.2-nucleus',
         days_elapsed: 1,
@@ -23,10 +20,9 @@
     };
 
     // --------------------------------------------------------
-    // Utilidades DOM
+    // Utilidades DOM (igual que antes)
     // --------------------------------------------------------
     const DOM = {
-        // Lobby
         countdown: document.getElementById('countdown-value'),
         budget: document.getElementById('budget-value'),
         invested: document.getElementById('invested-value'),
@@ -36,7 +32,6 @@
         versionBadge: document.getElementById('version-badge'),
         timestampBadge: document.getElementById('timestamp-badge'),
 
-        // Gatekeeper
         gatekeeperModal: document.getElementById('gatekeeper-modal'),
         nameInput: document.getElementById('observer-name'),
         nameStatus: document.getElementById('name-status'),
@@ -45,26 +40,79 @@
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
 
-        // Ranking
         rankingList: document.getElementById('ranking-list'),
         observerCount: document.getElementById('observer-count'),
         rankingCurrent: document.getElementById('ranking-current'),
 
-        // Mobile toggle
         btnToggleRanking: document.getElementById('btn-toggle-ranking'),
         rankingSidebar: document.getElementById('ranking-sidebar')
     };
 
     // --------------------------------------------------------
-    // Estado global
+    // "Base de datos" simulada en localStorage
     // --------------------------------------------------------
-    let currentObserver = null; // { name, color, country, accesses, rank }
-    let rankingManager = null;
-    let nameValidator = null;
-    let colorSelector = null;
+    function getObserversDB() {
+        const stored = localStorage.getItem('observers_db');
+        if (stored) {
+            return JSON.parse(stored);
+        } else {
+            // Datos de ejemplo para que no esté vacío
+            const defaultDB = [
+                { name: 'AlphaVortex42', color: '#39FF14', country: '🇺🇸', accesses: 5 },
+                { name: 'SilverNeon', color: '#00FFFF', country: '🇩🇪', accesses: 3 }
+            ];
+            localStorage.setItem('observers_db', JSON.stringify(defaultDB));
+            return defaultDB;
+        }
+    }
+
+    function saveObserversDB(db) {
+        localStorage.setItem('observers_db', JSON.stringify(db));
+    }
+
+    function findObserver(name) {
+        const db = getObserversDB();
+        return db.find(obs => obs.name === name);
+    }
+
+    function addObserver(name, color, country) {
+        const db = getObserversDB();
+        if (db.find(obs => obs.name === name)) return false;
+        db.push({
+            name: name,
+            color: color,
+            country: country,
+            accesses: 1
+        });
+        saveObserversDB(db);
+        return true;
+    }
+
+    function incrementAccess(name) {
+        const db = getObserversDB();
+        const obs = db.find(o => o.name === name);
+        if (obs) {
+            obs.accesses += 1;
+            saveObserversDB(db);
+            return obs.accesses;
+        }
+        return null;
+    }
+
+    function getRanking() {
+        const db = getObserversDB();
+        const sorted = [...db].sort((a, b) => b.accesses - a.accesses);
+        return sorted.map((obs, index) => ({
+            rank: index + 1,
+            name: obs.name,
+            color: obs.color,
+            country: obs.country,
+            accesses: obs.accesses
+        }));
+    }
 
     // --------------------------------------------------------
-    // NameValidator con debounce
+    // NameValidator (sin fetch)
     // --------------------------------------------------------
     class NameValidator {
         constructor() {
@@ -75,51 +123,33 @@
         }
 
         validar_formato(nombre) {
-            if (!nombre || nombre.length < this.minLength) {
-                return { valid: false, msg: 'Mínimo 3 caracteres' };
-            }
-            if (!this.pattern.test(nombre)) {
-                return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
-            }
+            if (!nombre || nombre.length < this.minLength) return { valid: false, msg: 'Mínimo 3 caracteres' };
+            if (!this.pattern.test(nombre)) return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
             return { valid: true, msg: '' };
         }
 
-        async validar_unicidad(nombre) {
-            try {
-                const response = await fetch(`${API_BASE}/api/observer/validate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: nombre })
-                });
-                const data = await response.json();
-                return {
-                    valid: data.available,
-                    msg: data.available ? '✅ Nombre disponible' : '❌ Nombre ya existe'
-                };
-            } catch (error) {
-                return { valid: false, msg: 'Error al validar' };
-            }
+        validar_unicidad(nombre) {
+            const exists = findObserver(nombre) !== undefined;
+            return {
+                valid: !exists,
+                msg: exists ? '❌ Nombre ya existe' : '✅ Nombre disponible'
+            };
         }
 
-        async validar_con_debounce(nombre) {
+        validar_con_debounce(nombre) {
             clearTimeout(this.debounceTimer);
-
             const formatoOk = this.validar_formato(nombre);
-            if (!formatoOk.valid) {
-                return formatoOk;
-            }
-
+            if (!formatoOk.valid) return Promise.resolve(formatoOk);
             return new Promise(resolve => {
-                this.debounceTimer = setTimeout(async () => {
-                    const unicidadOk = await this.validar_unicidad(nombre);
-                    resolve(unicidadOk);
+                this.debounceTimer = setTimeout(() => {
+                    resolve(this.validar_unicidad(nombre));
                 }, 500);
             });
         }
     }
 
     // --------------------------------------------------------
-    // ColorSelector
+    // ColorSelector (genera los botones)
     // --------------------------------------------------------
     class ColorSelector {
         constructor() {
@@ -155,9 +185,7 @@
         seleccionar_color(hex, name) {
             document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
             const selectedBtn = document.querySelector(`.color-btn[data-color="${hex}"]`);
-            if (selectedBtn) {
-                selectedBtn.classList.add('selected');
-            }
+            if (selectedBtn) selectedBtn.classList.add('selected');
             this.selected = { hex, name };
             DOM.colorName.innerHTML = `Color seleccionado: <strong style="color: ${hex};">${name}</strong>`;
             this.actualizar_preview(hex);
@@ -188,57 +216,39 @@
     async function acceder() {
         const nombre = DOM.nameInput.value.trim();
         const color = colorSelector.selected.hex;
-        // Obtener país vía API gratuita (ipapi.co)
-        let country = '🏳️'; // fallback
+
+        let country = '🏳️';
         try {
             const ipRes = await fetch('https://ipapi.co/json/');
             const ipData = await ipRes.json();
-            const code = ipData.country_code; // ej: 'US'
+            const code = ipData.country_code;
             if (code) {
-                // Convertir a flag emoji
-                const flag = code.toUpperCase().replace(/./g, char => 
+                country = code.toUpperCase().replace(/./g, char => 
                     String.fromCodePoint(127397 + char.charCodeAt())
                 );
-                country = flag;
             }
         } catch (e) {
-            console.warn('Geolocalización falló, usando bandera por defecto');
+            console.warn('Geolocalización falló');
         }
 
         DOM.btnEnter.classList.add('loading');
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
-        try {
-            const response = await fetch(`${API_BASE}/api/observer/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: nombre, color: color, country: country })
-            });
-            const data = await response.json();
-            if (data.success) {
-                // Guardar en localStorage
-                const observer = {
-                    name: nombre,
-                    color: color,
-                    country: country
-                };
-                localStorage.setItem('observer', JSON.stringify(observer));
-                // Cerrar modal
-                cerrarGatekeeper();
-                // Inicializar ranking con este usuario
-                currentObserver = observer;
-                await rankingManager.cargar_ranking();
-                // Hacer check-in inicial
-                await rankingManager.registrar_acceso();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        } catch (error) {
-            alert('Error de conexión');
-        } finally {
-            DOM.btnEnter.classList.remove('loading');
-            DOM.btnEnter.innerHTML = '🚀 ACCEDER AL LOBBY';
+        const success = addObserver(nombre, color, country);
+        if (success) {
+            const observer = { name: nombre, color: color, country: country };
+            localStorage.setItem('observer', JSON.stringify(observer));
+            currentObserver = observer;
+            cerrarGatekeeper();
+
+            rankingManager.cargar_ranking();
+            rankingManager.registrar_acceso(); // incrementa a 2? (ya se puso 1 en addObserver)
+        } else {
+            alert('Error: el nombre ya existe');
         }
+
+        DOM.btnEnter.classList.remove('loading');
+        DOM.btnEnter.innerHTML = '🚀 ACCEDER AL LOBBY';
     }
 
     function cerrarGatekeeper() {
@@ -250,7 +260,7 @@
     }
 
     // --------------------------------------------------------
-    // RankingManager
+    // RankingManager (simulado con localStorage)
     // --------------------------------------------------------
     class RankingManager {
         constructor() {
@@ -258,17 +268,11 @@
             this.updateInterval = null;
         }
 
-        async cargar_ranking() {
-            try {
-                const response = await fetch(`${API_BASE}/api/observers/ranking`);
-                const data = await response.json();
-                this.observers = data.observers;
-                this.render_ranking();
-                if (currentObserver) {
-                    this.actualizar_observador_actual();
-                }
-            } catch (error) {
-                console.error('Error cargando ranking:', error);
+        cargar_ranking() {
+            this.observers = getRanking();
+            this.render_ranking();
+            if (currentObserver) {
+                this.actualizar_observador_actual();
             }
         }
 
@@ -293,10 +297,10 @@
         }
 
         actualizar_observador_actual() {
-            // Buscar al observador actual en la lista
             const obs = this.observers.find(o => o.name === currentObserver.name);
             if (obs) {
-                currentObserver = { ...currentObserver, accesses: obs.accesses, rank: obs.rank };
+                currentObserver.accesses = obs.accesses;
+                currentObserver.rank = obs.rank;
                 const html = `
                     <p class="current-label">TÚ ERES:</p>
                     <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
@@ -307,38 +311,15 @@
                     </div>
                 `;
                 DOM.rankingCurrent.innerHTML = html;
-            } else {
-                // Si no aparece (raro), mostrar solo nombre
-                DOM.rankingCurrent.innerHTML = `
-                    <p class="current-label">TÚ ERES:</p>
-                    <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
-                    <div class="current-details">
-                        <p>Esperando datos...</p>
-                    </div>
-                `;
             }
         }
 
-        async registrar_acceso() {
+        registrar_acceso() {
             if (!currentObserver) return;
-            try {
-                const response = await fetch(`${API_BASE}/api/observer/checkin`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: currentObserver.name })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    // Actualizar datos locales
-                    if (currentObserver) {
-                        currentObserver.accesses = data.accesses;
-                        currentObserver.rank = data.rank;
-                    }
-                    // Recargar ranking para reflejar cambios
-                    await this.cargar_ranking();
-                }
-            } catch (error) {
-                console.error('Error en check-in:', error);
+            const accesses = incrementAccess(currentObserver.name);
+            if (accesses) {
+                currentObserver.accesses = accesses;
+                this.cargar_ranking();
             }
         }
 
@@ -356,15 +337,14 @@
     }
 
     // --------------------------------------------------------
-    // Funciones del lobby (v0.1)
+    // Funciones del lobby (carga data.json)
     // --------------------------------------------------------
     async function loadLobbyData() {
         try {
-            const response = await fetch(`${API_BASE}/data.json?t=${Date.now()}`);
+            const response = await fetch(`data.json?t=${Date.now()}`);
             const data = await response.json();
             renderLobby(data);
         } catch (error) {
-            console.warn('Error cargando data.json, usando fallback:', error);
             renderLobby(FALLBACK_DATA);
         }
     }
@@ -395,7 +375,7 @@
     }
 
     // Contador regresivo
-    const EXPIRATION_DATE = new Date(2027, 1, 16); // 16 feb 2027
+    const EXPIRATION_DATE = new Date(2027, 1, 16);
     function updateCountdown() {
         const now = new Date();
         const diff = EXPIRATION_DATE - now;
@@ -418,8 +398,12 @@
     // --------------------------------------------------------
     // Inicialización
     // --------------------------------------------------------
+    let currentObserver = null;
+    let colorSelector = null;
+    let rankingManager = null;
+    let nameValidator = null;
+
     async function init() {
-        // Exponer funciones para botones
         window.zeroFlenUI = {
             recargar_datos: loadLobbyData,
             mostrar_status: () => {
@@ -429,39 +413,26 @@
             }
         };
 
-        // Iniciar contadores
         updateCountdown();
         setInterval(updateCountdown, 1000);
         setInterval(updateTimestampBadge, 1000);
 
-        // Cargar datos del lobby
         await loadLobbyData();
 
-        // Verificar localStorage
+        rankingManager = new RankingManager();
+
         const stored = localStorage.getItem('observer');
         if (stored) {
-            try {
-                currentObserver = JSON.parse(stored);
-                // Si hay usuario, no mostrar Gatekeeper
-                DOM.gatekeeperModal.classList.remove('active');
-                // Inicializar ranking
-                rankingManager = new RankingManager();
-                await rankingManager.cargar_ranking();
-                rankingManager.start_auto_update();
-                // Hacer check-in (incrementar acceso)
-                await rankingManager.registrar_acceso();
-            } catch (e) {
-                localStorage.removeItem('observer');
-                abrirGatekeeper();
-            }
+            currentObserver = JSON.parse(stored);
+            DOM.gatekeeperModal.classList.remove('active');
+            rankingManager.cargar_ranking();
+            rankingManager.start_auto_update();
+            rankingManager.registrar_acceso();
         } else {
-            // No hay usuario, mostrar Gatekeeper
             abrirGatekeeper();
-            // Inicializar componentes del Gatekeeper
             nameValidator = new NameValidator();
             colorSelector = new ColorSelector();
 
-            // Eventos
             DOM.nameInput.addEventListener('input', async (e) => {
                 const nombre = e.target.value.trim();
                 DOM.previewName.textContent = nombre || 'Ingresa tu nombre';
@@ -474,7 +445,6 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
-        // Móvil: toggle ranking
         if (DOM.btnToggleRanking) {
             DOM.btnToggleRanking.addEventListener('click', () => {
                 DOM.rankingSidebar.classList.toggle('visible');
