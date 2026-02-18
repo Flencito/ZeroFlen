@@ -3,84 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ZeroFlen Lobby v0.1 - Terminal de Observación">
+    <meta name="description" content="ZeroFlen Lobby v0.2 - Terminal de Observación">
     <title>ZeroFlen</title>
-    
-    <!-- Referencia a CSS externo -->
-    <link rel="icon" type="image/png" href="icono-zeroflen.png">
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="icono-zeroflen.png">
 </head>
 <body>
-    <div class="container">
-        <!-- ============ ERROR CONTAINER ============ -->
-        <div id="error-container">
-            <strong>⚠️ Error:</strong> No se pudo cargar los datos del servidor.
-        </div>
-        
-        <!-- ============ LOADING INDICATOR ============ -->
-        <div id="loading">
-            <div class="spinner"></div>
-            <div class="spinner-text">Inicializando terminal...</div>
-        </div>
-        
-        <!-- ============ HEADER / IDENTIFICADOR ============ -->
-        <div class="header">
-            <div>
-                <div class="header-title">⚡ ZEROFLEN</div>
-                <div class="header-subtitle">Lobby v0.1</div>
+    <!-- ============ GATEKEEPER MODAL ============ -->
+    <div id="gatekeeper-modal" class="gatekeeper-modal">
+        <div class="gatekeeper-backdrop"></div>
+        <div class="gatekeeper-container">
+            <div class="gatekeeper-header">
+                <h1 class="gatekeeper-title">🔐 THE GATEKEEPER</h1>
+                <p class="gatekeeper-subtitle">Elige tu identidad observadora</p>
             </div>
-            <div class="badges">
-                <div class="badge" id="version-badge">0.1-nucleus</div>
-                <div class="badge" id="timestamp-badge">--:--:--</div>
+            <div class="gatekeeper-form">
+                <!-- Nombre -->
+                <div class="form-group">
+                    <label for="observer-name" class="label">NOMBRE DE OBSERVADOR</label>
+                    <input type="text" id="observer-name" class="input-name" placeholder="Ej: AlphaVortex42" maxlength="20" autocomplete="off">
+                    <div id="name-status" class="name-status"></div>
+                </div>
+                <!-- Color -->
+                <div class="form-group">
+                    <label class="label">FIRMA CROMÁTICA</label>
+                    <div class="color-palette" id="color-palette">
+                        <!-- Se generan con JS, pero podemos ponerlos fijos también -->
+                    </div>
+                    <p id="color-name" class="color-name">Selecciona un color</p>
+                </div>
+                <!-- Preview -->
+                <div class="preview-section">
+                    <p class="preview-label">VISTA PREVIA (Neon Breath):</p>
+                    <p id="preview-name" class="preview-name breathe">Ingresa tu nombre</p>
+                </div>
+                <!-- Botón -->
+                <button id="btn-enter" class="btn-enter" disabled>🚀 ACCEDER AL LOBBY</button>
             </div>
-        </div>
-        
-        <!-- ============ SECCIÓN DE ESTADO ============ -->
-        <div class="status-section">
-            <div class="status-item">
-                <div class="status-label">Tiempo Restante</div>
-                <div class="status-value" id="countdown-value">365d 00h 00m 00s</div>
-                <div class="status-sublabel">El dominio expira en 365 días</div>
+            <div class="gatekeeper-footer">
+                <p class="footer-text">Tu identidad es única y permanente. Elige sabiamente.</p>
             </div>
-            
-            <!-- Los demás items se mantienen igual -->
-            <div class="status-item">
-                <div class="status-label">Presupuesto Restante</div>
-                <div class="status-value" id="budget-value">$20.00</div>
-                <div class="status-sublabel">de $20.00 inicial</div>
-            </div>
-            <!-- ... -->
-        </div>
-        
-        <!-- ============ EVOLUCIÓN ============ -->
-        <div class="evolution-section">
-            <div class="evolution-label">Estado de Evolución</div>
-            <div id="evolution-text">Inicializando...</div>
-        </div>
-        
-        <!-- ============ BITÁCORA / LOGS ============ -->
-        <div class="logs-section">
-            <div class="logs-title">Bitácora de Eventos</div>
-            <div id="log-container">
-                <div class="logs-empty">Sin eventos registrados</div>
-            </div>
-        </div>
-        
-        <!-- ============ ESPACIO INTENCIONAL ============ -->
-        <div class="spacer"></div>
-        
-        <!-- ============ FOOTER / ACCIONES ============ -->
-        <div class="footer">
-            <button class="btn" id="btn-reload" onclick="if(window.zeroFlenUI) window.zeroFlenUI.recargar_datos()">
-                🔄 Recargar
-            </button>
-            <button class="btn" id="btn-status" onclick="if(window.zeroFlenUI) window.zeroFlenUI.mostrar_status()">
-                📊 Estado
-            </button>
         </div>
     </div>
-    
-    <!-- ============ SCRIPT ============ -->
+
+    <!-- ============ LAYOUT PRINCIPAL ============ -->
+    <div class="main-layout">
+        <!-- SIDEBAR RANKING -->
+        <aside id="ranking-sidebar" class="ranking-sidebar">
+            <div class="ranking-header">
+                <h3 class="ranking-title">📊 OBSERVADORES</h3>
+                <p class="ranking-count" id="observer-count">#0 activos</p>
+            </div>
+            <div class="ranking-list" id="ranking-list">
+                <!-- JS rellena -->
+                <div class="ranking-entry">Cargando...</div>
+            </div>
+            <div class="ranking-divider"></div>
+            <div class="ranking-current" id="ranking-current">
+                <!-- JS rellena -->
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL (LOBBY v0.1) -->
+        <main class="lobby-content">
+            <div class="container">
+                <!-- Header -->
+                <div class="header">
+                    <div>
+                        <div class="header-title">⚡ ZEROFLEN</div>
+                        <div class="header-subtitle">Lobby v0.2</div>
+                    </div>
+                    <div class="badges">
+                        <div class="badge" id="version-badge">0.2-nucleus</div>
+                        <div class="badge" id="timestamp-badge">--:--:--</div>
+                    </div>
+                </div>
+
+                <!-- Sección de estado -->
+                <div class="status-section">
+                    <div class="status-item">
+                        <div class="status-label">Tiempo Restante</div>
+                        <div class="status-value" id="countdown-value">365d 00h 00m 00s</div>
+                        <div class="status-sublabel">El dominio expira en 365 días</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Presupuesto Restante</div>
+                        <div class="status-value" id="budget-value">$20.00</div>
+                        <div class="status-sublabel">de $20.00 inicial</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Total Invertido</div>
+                        <div class="status-value" id="invested-value">$0.00</div>
+                        <div class="status-sublabel">en infraestructura</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Estado Protección</div>
+                        <div class="status-value" id="status-badge">PROTECTED</div>
+                        <div class="status-sublabel">saldo seguro</div>
+                    </div>
+                </div>
+
+                <!-- Evolución -->
+                <div class="evolution-section">
+                    <div class="evolution-label">Estado de Evolución</div>
+                    <div id="evolution-text">Inicializando...</div>
+                </div>
+
+                <!-- Bitácora -->
+                <div class="logs-section">
+                    <div class="logs-title">Bitácora de Eventos</div>
+                    <div id="log-container">
+                        <div class="logs-empty">Sin eventos registrados</div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <button class="btn" id="btn-reload" onclick="if(window.zeroFlenUI) window.zeroFlenUI.recargar_datos()">🔄 Recargar</button>
+                    <button class="btn" id="btn-status" onclick="if(window.zeroFlenUI) window.zeroFlenUI.mostrar_status()">📊 Estado</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Botón para móvil (mostrar ranking) -->
+    <button id="btn-toggle-ranking" class="btn-toggle-ranking">📊</button>
+
     <script src="script.js"></script>
 </body>
 </html>
