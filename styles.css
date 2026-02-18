@@ -766,3 +766,35 @@ body {
 .spacer {
     height: 40px;
 }
+
+/* ============ PERSONALIZACIÓN GLOBAL DE SCROLLBARS ============ */
+/* Chrome, Edge, Safari, Opera */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-darker);  /* Fondo negro */
+    border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-primary);  /* Verde neón */
+    border-radius: 4px;
+    border: 2px solid var(--color-darker); /* Borde del mismo color para efecto integrado */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5eff3b; /* Verde más brillante al pasar mouse */
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--color-darker);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) var(--color-darker);
+}
