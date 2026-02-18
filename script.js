@@ -1,5 +1,6 @@
 /**
  * ZeroFlen v0.2 - Con Supabase (ranking global) + Reproductor persistente
+ * Versión completa y funcional
  */
 
 (function() {
@@ -70,10 +71,17 @@
     };
 
     // --------------------------------------------------------
+    // Estado global
+    // --------------------------------------------------------
+    let currentObserver = null; // { name, color, country }
+    let rankingManager = null;
+    let nameValidator = null;
+    let colorSelector = null;
+
+    // --------------------------------------------------------
     // Reproductor global (singleton)
     // --------------------------------------------------------
     const MusicPlayer = (function() {
-        let player = null;
         let playlist = [];
         let currentIndex = 0;
         let isPlaying = false;
@@ -81,7 +89,6 @@
         let youtubePlayer = null;
         let onStateChangeCallbacks = [];
 
-        // Inicializar API de YouTube
         function loadYouTubeAPI() {
             if (window.YT && window.YT.Player) {
                 return Promise.resolve();
@@ -247,30 +254,304 @@
     }
 
     // --------------------------------------------------------
-    // NameValidator (sin cambios)
+    // NameValidator con debounce (consulta Supabase)
     // --------------------------------------------------------
-    class NameValidator { /* ... (igual que antes) ... */ }
+    class NameValidator {
+        constructor() {
+            this.minLength = 3;
+            this.maxLength = 20;
+            this.pattern = /^[a-zA-Z0-9_-]{3,20}$/;
+            this.debounceTimer = null;
+        }
+
+        validar_formato(nombre) {
+            if (!nombre || nombre.length < this.minLength) {
+                return { valid: false, msg: 'Mínimo 3 caracteres' };
+            }
+            if (!this.pattern.test(nombre)) {
+                return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
+            }
+            return { valid: true, msg: '' };
+        }
+
+        async validar_unicidad(nombre) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('observers')
+                    .select('name')
+                    .eq('name', nombre)
+                    .maybeSingle();
+
+                if (error) throw error;
+                const exists = data !== null;
+                return {
+                    valid: !exists,
+                    msg: exists ? '❌ Nombre ya existe' : '✅ Nombre disponible'
+                };
+            } catch (error) {
+                console.error('Error validando unicidad:', error);
+                return { valid: false, msg: 'Error al validar' };
+            }
+        }
+
+        async validar_con_debounce(nombre) {
+            clearTimeout(this.debounceTimer);
+            const formatoOk = this.validar_formato(nombre);
+            if (!formatoOk.valid) return formatoOk;
+
+            return new Promise(resolve => {
+                this.debounceTimer = setTimeout(async () => {
+                    const unicidadOk = await this.validar_unicidad(nombre);
+                    resolve(unicidadOk);
+                }, 500);
+            });
+        }
+    }
 
     // --------------------------------------------------------
-    // ColorSelector (sin cambios)
+    // ColorSelector
     // --------------------------------------------------------
-    class ColorSelector { /* ... (igual que antes) ... */ }
+    class ColorSelector {
+        constructor() {
+            this.colors = [
+                { hex: '#39FF14', name: 'Verde' },
+                { hex: '#00FFFF', name: 'Cian' },
+                { hex: '#FF00FF', name: 'Magenta' },
+                { hex: '#FFFF00', name: 'Amarillo' },
+                { hex: '#FF6600', name: 'Naranja' },
+                { hex: '#FFFFFF', name: 'Blanco' },
+                { hex: '#0099FF', name: 'Azul' }
+            ];
+            this.selected = null;
+            this.renderPalette();
+        }
+
+        renderPalette() {
+            DOM.colorPalette.innerHTML = '';
+            this.colors.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'color-btn';
+                btn.dataset.color = c.hex;
+                btn.dataset.name = c.name;
+                btn.innerHTML = `
+                    <span class="color-circle" style="background: ${c.hex}; box-shadow: 0 0 10px ${c.hex};"></span>
+                    <span class="color-label">${c.name}</span>
+                `;
+                btn.addEventListener('click', () => this.seleccionar_color(c.hex, c.name));
+                DOM.colorPalette.appendChild(btn);
+            });
+        }
+
+        seleccionar_color(hex, name) {
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
+            const selectedBtn = document.querySelector(`.color-btn[data-color="${hex}"]`);
+            if (selectedBtn) selectedBtn.classList.add('selected');
+            this.selected = { hex, name };
+            DOM.colorName.innerHTML = `Color seleccionado: <strong style="color: ${hex};">${name}</strong>`;
+            this.actualizar_preview(hex);
+            validar_completitud();
+        }
+
+        actualizar_preview(hex) {
+            DOM.previewName.style.color = hex;
+        }
+    }
 
     // --------------------------------------------------------
-    // Funciones del Gatekeeper (sin cambios)
+    // Funciones del Gatekeeper
     // --------------------------------------------------------
-    function validar_completitud() { /* ... */ }
-    async function acceder() { /* ... */ }
-    function cerrarGatekeeper() { /* ... */ }
-    function abrirGatekeeper() { /* ... */ }
+    function validar_completitud() {
+        const nombre = DOM.nameInput.value.trim();
+        const colorOk = colorSelector && colorSelector.selected !== null;
+        const nombreOk = nombre.length >= 3 && /^[a-zA-Z0-9_-]{3,20}$/.test(nombre);
+        if (nombreOk && colorOk) {
+            DOM.btnEnter.disabled = false;
+            DOM.btnEnter.classList.add('enabled');
+        } else {
+            DOM.btnEnter.disabled = true;
+            DOM.btnEnter.classList.remove('enabled');
+        }
+    }
+
+    async function acceder() {
+        const nombre = DOM.nameInput.value.trim();
+        const color = colorSelector.selected.hex;
+
+        let country = '🏳️';
+        try {
+            const ipRes = await fetch('https://ipapi.co/json/');
+            const ipData = await ipRes.json();
+            const code = ipData.country_code;
+            if (code) {
+                country = code.toUpperCase().replace(/./g, char => 
+                    String.fromCodePoint(127397 + char.charCodeAt())
+                );
+            }
+        } catch (e) {
+            console.warn('Geolocalización falló, usando bandera por defecto');
+        }
+
+        DOM.btnEnter.classList.add('loading');
+        DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('observers')
+                .insert([
+                    { name: nombre, color: color, country: country, accesses: 1 }
+                ])
+                .select();
+
+            if (error) {
+                if (error.code === '23505') {
+                    alert('Error: el nombre ya existe');
+                } else {
+                    alert('Error al registrar: ' + error.message);
+                }
+                return;
+            }
+
+            const observer = { name: nombre, color: color, country: country };
+            localStorage.setItem('observer', JSON.stringify(observer));
+            currentObserver = observer;
+            cerrarGatekeeper();
+
+            new MenuSidebar(currentObserver);
+            await rankingManager.cargar_ranking();
+
+        } catch (error) {
+            alert('Error de conexión');
+        } finally {
+            DOM.btnEnter.classList.remove('loading');
+            DOM.btnEnter.innerHTML = '🚀 ACCEDER AL LOBBY';
+        }
+    }
+
+    function cerrarGatekeeper() {
+        DOM.gatekeeperModal.classList.remove('active');
+    }
+
+    function abrirGatekeeper() {
+        DOM.gatekeeperModal.classList.add('active');
+    }
 
     // --------------------------------------------------------
-    // RankingManager (sin cambios)
+    // RankingManager (con Supabase)
     // --------------------------------------------------------
-    class RankingManager { /* ... (igual que antes) ... */ }
+    class RankingManager {
+        constructor() {
+            this.observers = [];
+            this.updateInterval = null;
+        }
+
+        async cargar_ranking() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('observers')
+                    .select('name, color, country, accesses')
+                    .order('accesses', { ascending: false });
+
+                if (error) throw error;
+
+                this.observers = data.map((obs, index) => ({
+                    rank: index + 1,
+                    ...obs
+                }));
+                this.render_ranking();
+                if (currentObserver) {
+                    this.actualizar_observador_actual();
+                }
+            } catch (error) {
+                console.error('Error cargando ranking:', error);
+            }
+        }
+
+        render_ranking() {
+            DOM.rankingList.innerHTML = '';
+            this.observers.forEach(obs => {
+                const entry = document.createElement('div');
+                entry.className = 'ranking-entry';
+                entry.innerHTML = `
+                    <div class="entry-left">
+                        <span class="rank">${obs.rank}</span>
+                        <span class="observer-name" style="color: ${obs.color};">${obs.name}</span>
+                    </div>
+                    <div class="entry-right">
+                        <span class="country">${obs.country}</span>
+                        <span class="accesses">${obs.accesses.toLocaleString()}</span>
+                    </div>
+                `;
+                DOM.rankingList.appendChild(entry);
+            });
+            DOM.observerCount.textContent = `#${this.observers.length} activos`;
+        }
+
+        actualizar_observador_actual() {
+            const obs = this.observers.find(o => o.name === currentObserver.name);
+            if (obs) {
+                const html = `
+                    <p class="current-label">TÚ ERES:</p>
+                    <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
+                    <div class="current-details">
+                        <span class="current-country">${currentObserver.country}</span>
+                        <p class="current-rank">Rango: #${obs.rank}</p>
+                        <p class="current-accesses">Accesos: ${obs.accesses.toLocaleString()}</p>
+                    </div>
+                `;
+                DOM.rankingCurrent.innerHTML = html;
+            } else {
+                DOM.rankingCurrent.innerHTML = `
+                    <p class="current-label">TÚ ERES:</p>
+                    <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
+                    <div class="current-details">
+                        <p>Esperando datos...</p>
+                    </div>
+                `;
+            }
+        }
+
+        async registrar_acceso() {
+            if (!currentObserver) return;
+            try {
+                const { data: obs, error: selectError } = await supabaseClient
+                    .from('observers')
+                    .select('accesses')
+                    .eq('name', currentObserver.name)
+                    .single();
+
+                if (selectError) throw selectError;
+
+                if (obs) {
+                    const newAccesses = obs.accesses + 1;
+                    const { error: updateError } = await supabaseClient
+                        .from('observers')
+                        .update({ accesses: newAccesses, last_access: new Date() })
+                        .eq('name', currentObserver.name);
+
+                    if (updateError) throw updateError;
+                }
+
+                await this.cargar_ranking();
+            } catch (error) {
+                console.error('Error en check-in:', error);
+            }
+        }
+
+        start_auto_update() {
+            if (this.updateInterval) clearInterval(this.updateInterval);
+            this.updateInterval = setInterval(() => this.cargar_ranking(), 5000);
+        }
+
+        stop_auto_update() {
+            if (this.updateInterval) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+            }
+        }
+    }
 
     // --------------------------------------------------------
-    // Menú Sidebar (ligeramente modificado)
+    // Menú Sidebar
     // --------------------------------------------------------
     class MenuSidebar {
         constructor(observer) {
@@ -278,7 +559,7 @@
             this.actualizarPerfil();
             DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
             this.cargarPreview();
-            new MiniPlayer(); // Inicializar mini‑reproductor
+            new MiniPlayer();
         }
 
         actualizarPerfil() {
@@ -318,7 +599,7 @@
     }
 
     // --------------------------------------------------------
-    // Galería Modal (modificada para usar el reproductor global)
+    // Galería Modal (usa el reproductor global)
     // --------------------------------------------------------
     class GaleriaModal {
         constructor() {
@@ -351,9 +632,7 @@
                             <h2>🎵 MUTACIÓN MÚSICA - GALERÍA</h2>
                             <button class="btn-close-galeria">✕</button>
                         </div>
-                        <!-- Grid de proyectos -->
                         <div class="galeria-grid" id="galeria-content"></div>
-                        <!-- Reproductor (oculto inicialmente) -->
                         <div class="reproductor-container" id="reproductor-container" style="display: none;">
                             <div class="disco-container">
                                 <img id="disco-imagen" class="disco-rotatorio" src="" alt="cover">
@@ -380,7 +659,6 @@
             this.modal = document.getElementById('galeria-modal');
             this.cargarProyectos();
             this.agregarEventos();
-            // Sincronizar con el estado actual del reproductor
             this.syncWithPlayer(MusicPlayer.getState());
         }
 
@@ -423,7 +701,6 @@
         }
 
         abrirReproductor(proyecto) {
-            // Efecto glitch
             this.modal.classList.add('glitch');
             setTimeout(() => this.modal.classList.remove('glitch'), 500);
 
@@ -433,7 +710,6 @@
 
             document.getElementById('disco-imagen').src = proyecto.cover;
 
-            // Configurar controles (usar el reproductor global)
             document.getElementById('play-pause-btn').addEventListener('click', () => MusicPlayer.togglePlayPause());
             document.getElementById('prev-btn').addEventListener('click', () => MusicPlayer.prev());
             document.getElementById('next-btn').addEventListener('click', () => MusicPlayer.next());
@@ -453,7 +729,6 @@
                 document.getElementById('progress-bar').style.width = progress + '%';
                 document.getElementById('tiempo-actual').textContent = formatTime(current);
                 document.getElementById('tiempo-duracion').textContent = formatTime(duration);
-                // Rotación del disco
                 const disco = document.getElementById('disco-imagen');
                 if (state.isPlaying) {
                     disco.classList.add('reproduciendo');
@@ -479,13 +754,63 @@
     }
 
     // --------------------------------------------------------
-    // Funciones del lobby (carga data.json) - sin cambios
+    // Funciones del lobby (carga data.json)
     // --------------------------------------------------------
-    async function loadLobbyData() { /* ... */ }
-    function renderLobby(data) { /* ... */ }
+    async function loadLobbyData() {
+        try {
+            const response = await fetch(`data.json?t=${Date.now()}`);
+            const data = await response.json();
+            renderLobby(data);
+        } catch (error) {
+            console.warn('Error cargando data.json, usando fallback:', error);
+            renderLobby(FALLBACK_DATA);
+        }
+    }
+
+    function renderLobby(data) {
+        if (DOM.versionBadge) DOM.versionBadge.textContent = data.version;
+        if (DOM.budget) DOM.budget.textContent = '$' + data.financials.remaining.toFixed(2);
+        if (DOM.invested) DOM.invested.textContent = '$' + data.financials.invested.toFixed(2);
+        if (DOM.statusBadge) DOM.statusBadge.textContent = data.financials.status;
+        if (DOM.evolution) DOM.evolution.textContent = data.evolution_state;
+        if (DOM.logContainer) {
+            DOM.logContainer.innerHTML = '';
+            if (data.logs && data.logs.length) {
+                data.logs.forEach(log => {
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    entry.innerHTML = `
+                        <span class="log-timestamp">${log.timestamp}</span>
+                        <span class="log-id">${log.id}</span>
+                        <span class="log-msg">${log.msg}</span>
+                    `;
+                    DOM.logContainer.appendChild(entry);
+                });
+            } else {
+                DOM.logContainer.innerHTML = '<div class="logs-empty">Sin eventos registrados</div>';
+            }
+        }
+    }
+
     const EXPIRATION_DATE = new Date(2027, 1, 16);
-    function updateCountdown() { /* ... */ }
-    function updateTimestampBadge() { /* ... */ }
+    function updateCountdown() {
+        const now = new Date();
+        const diff = EXPIRATION_DATE - now;
+        if (diff <= 0) {
+            DOM.countdown.textContent = '0d 00h 00m 00s';
+            return;
+        }
+        const seconds = Math.floor(diff / 1000) % 60;
+        const minutes = Math.floor(diff / (1000 * 60)) % 60;
+        const hours = Math.floor(diff / (1000 * 60 * 60)) % 24;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        DOM.countdown.textContent = `${days}d ${hours.toString().padStart(2,'0')}h ${minutes.toString().padStart(2,'0')}m ${seconds.toString().padStart(2,'0')}s`;
+    }
+
+    function updateTimestampBadge() {
+        const now = new Date();
+        DOM.timestampBadge.textContent = now.toTimeString().slice(0,8);
+    }
 
     // --------------------------------------------------------
     // Inicialización
@@ -564,6 +889,8 @@
         init();
     }
 
-    // Elemento oculto para el reproductor de YouTube (debe existir en el DOM)
-    document.body.insertAdjacentHTML('beforeend', '<div id="youtube-player-hidden" style="display: none;"></div>');
+    // Elemento oculto para YouTube
+    if (!document.getElementById('youtube-player-hidden')) {
+        document.body.insertAdjacentHTML('beforeend', '<div id="youtube-player-hidden" style="display: none;"></div>');
+    }
 })();
