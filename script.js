@@ -1,5 +1,5 @@
 /**
- * ZeroFlen v0.2 - Con Supabase (ranking global) + Menú y Galería
+ * ZeroFlen v0.2 - Con Supabase (ranking global) + Menú y Galería + Reproductor YouTube
  */
 
 (function() {
@@ -57,7 +57,7 @@
         btnToggleRanking: document.getElementById('btn-toggle-ranking'),
         rankingSidebar: document.getElementById('ranking-sidebar'),
 
-        // Menú (nuevo)
+        // Menú
         menuProfileName: document.getElementById('profile-name'),
         menuColorDot: document.getElementById('profile-color-dot'),
         btnGaleria: document.getElementById('btn-galeria'),
@@ -219,7 +219,6 @@
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
         try {
-            // Insertar nuevo observador en Supabase
             const { data, error } = await supabaseClient
                 .from('observers')
                 .insert([
@@ -228,7 +227,7 @@
                 .select();
 
             if (error) {
-                if (error.code === '23505') { // unique violation
+                if (error.code === '23505') {
                     alert('Error: el nombre ya existe');
                 } else {
                     alert('Error al registrar: ' + error.message);
@@ -236,18 +235,14 @@
                 return;
             }
 
-            // Guardar en localStorage
             const observer = { name: nombre, color: color, country: country };
             localStorage.setItem('observer', JSON.stringify(observer));
             currentObserver = observer;
             cerrarGatekeeper();
 
-            // Inicializar menú con el nuevo observador
             new MenuSidebar(currentObserver);
 
-            // Actualizar ranking
             await rankingManager.cargar_ranking();
-            // No hacemos checkin adicional porque ya se insertó con accesses=1
 
         } catch (error) {
             alert('Error de conexión');
@@ -403,14 +398,13 @@
         }
 
         async cargarPreview() {
-            // Simulación de proyectos (reemplazar con fetch real si existe endpoint)
             const proyectos = [
-                { id: 1, name: 'Dominio DNS', category: 'Infraestructura', cover: 'https://via.placeholder.com/150/0d1117/39FF14?text=DNS' },
-                { id: 2, name: 'X Premium', category: 'Social', cover: 'https://via.placeholder.com/150/0d1117/39FF14?text=X' },
-                { id: 3, name: 'Núcleo', category: 'Core', cover: 'https://via.placeholder.com/150/0d1117/39FF14?text=NUCLEO' }
+                { id: 1, name: 'Brighter', category: 'Hazbin Hotel', youtubeId: 'eTpEdZoAYbM', cover: 'https://img.youtube.com/vi/eTpEdZoAYbM/0.jpg' },
+                { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', youtubeId: 'FxOFYp_ZA8M', cover: 'https://img.youtube.com/vi/FxOFYp_ZA8M/0.jpg' },
+                { id: 3, name: 'I Cant Control Myself', category: 'Fnaf', youtubeId: 'YgiopHEUcqI', cover: 'https://img.youtube.com/vi/YgiopHEUcqI/0.jpg' }
             ];
             DOM.menuPreview.innerHTML = proyectos.map(p => `
-                <div class="gallery-card preview-card" data-id="${p.id}">
+                <div class="gallery-card preview-card" data-id="${p.id}" data-youtube-id="${p.youtubeId}">
                     <div class="card-image-wrapper">
                         <img src="${p.cover}" alt="${p.name}" class="card-image" loading="lazy">
                         <div class="card-info">
@@ -429,11 +423,95 @@
     }
 
     // --------------------------------------------------------
-    // Galería Modal
+    // Reproductor de YouTube (nuevo)
+    // --------------------------------------------------------
+    class YouTubePlayer {
+        constructor(containerId, videoId, onReady) {
+            this.containerId = containerId;
+            this.videoId = videoId;
+            this.player = null;
+            this.onReady = onReady;
+            this.loadAPI();
+        }
+
+        loadAPI() {
+            if (window.YT && window.YT.Player) {
+                this.createPlayer();
+                return;
+            }
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            window.onYouTubeIframeAPIReady = () => this.createPlayer();
+        }
+
+        createPlayer() {
+            this.player = new YT.Player(this.containerId, {
+                height: '0',
+                width: '0',
+                videoId: this.videoId,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 0,
+                    disablekb: 1,
+                    fs: 0,
+                    modestbranding: 1,
+                    playsinline: 1
+                },
+                events: {
+                    onReady: () => this.onReady(this.player),
+                    onStateChange: (e) => this.onStateChange(e)
+                }
+            });
+        }
+
+        onStateChange(e) {
+            // Puede ser usado para actualizar el botón play/pause
+        }
+
+        play() {
+            if (this.player) this.player.playVideo();
+        }
+
+        pause() {
+            if (this.player) this.player.pauseVideo();
+        }
+
+        seekTo(seconds) {
+            if (this.player) this.player.seekTo(seconds, true);
+        }
+
+        getCurrentTime() {
+            return this.player ? this.player.getCurrentTime() : 0;
+        }
+
+        getDuration() {
+            return this.player ? this.player.getDuration() : 0;
+        }
+    }
+
+    // --------------------------------------------------------
+    // Galería Modal (modificada con reproductor)
     // --------------------------------------------------------
     class GaleriaModal {
         constructor() {
             this.modal = null;
+            this.player = null;
+            this.proyectos = [
+                { id: 1, name: 'Brighter', category: 'Hazbin Hotel', youtubeId: 'eTpEdZoAYbM', cover: 'https://img.youtube.com/vi/eTpEdZoAYbM/0.jpg' },
+                { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', youtubeId: 'FxOFYp_ZA8M', cover: 'https://img.youtube.com/vi/FxOFYp_ZA8M/0.jpg' },
+                { id: 3, name: 'I Cant Control Myself', category: 'Fnaf', youtubeId: 'YgiopHEUcqI', cover: 'https://img.youtube.com/vi/YgiopHEUcqI/0.jpg' },
+                { id: 4, name: 'Gatekeeper', category: 'Seguridad', youtubeId: '', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=GATEKEEPER' },
+                { id: 5, name: 'Ranking', category: 'Social', youtubeId: '', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=RANKING' },
+                { id: 6, name: 'Mutación', category: 'Música', youtubeId: '', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=MUTACION' },
+                { id: 7, name: 'Neon Breath', category: 'Arte', youtubeId: '', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=NEON' },
+                { id: 8, name: 'ZeroFlen', category: 'Core', youtubeId: '', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=ZEROFLEN' }
+            ];
+            this.currentPlaylist = this.proyectos.filter(p => p.youtubeId); // Solo los que tienen video
+            this.currentIndex = 0;
+            this.isPlaying = false;
+            this.progressInterval = null;
         }
 
         abrir() {
@@ -450,7 +528,27 @@
                             <h2>🎵 MUTACIÓN MÚSICA - GALERÍA</h2>
                             <button class="btn-close-galeria">✕</button>
                         </div>
+                        <!-- Grid de proyectos (visible por defecto) -->
                         <div class="galeria-grid" id="galeria-content"></div>
+                        <!-- Reproductor (oculto inicialmente) -->
+                        <div class="reproductor-container" id="reproductor-container" style="display: none;">
+                            <div class="disco-container">
+                                <img id="disco-imagen" class="disco-rotatorio" src="" alt="cover">
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-neon" id="progress-bar"></div>
+                            </div>
+                            <div class="controles">
+                                <button class="control-btn" id="prev-btn">⏮ PREV</button>
+                                <button class="control-btn" id="play-pause-btn">▶ PLAY</button>
+                                <button class="control-btn" id="next-btn">⏭ NEXT</button>
+                            </div>
+                            <div class="tiempo-info">
+                                <span id="tiempo-actual">0:00</span> / <span id="tiempo-duracion">0:00</span>
+                            </div>
+                            <!-- Reproductor oculto de YouTube -->
+                            <div id="youtube-player" style="display: none;"></div>
+                        </div>
                         <div class="galeria-footer">
                             <button class="btn-volver">◄ VOLVER AL LOBBY</button>
                         </div>
@@ -463,25 +561,14 @@
             this.agregarEventos();
         }
 
-        async cargarProyectos() {
-            // Simulación de proyectos (reemplazar con fetch real)
-            const proyectos = [
-                { id: 1, name: 'Brighter', category: 'Hazbin Hotel', cover: 'https://youtu.be/eTpEdZoAYbM?si=0KjTSqoIgnHncJa0' },
-                { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', cover: 'https://youtu.be/FxOFYp_ZA8M?si=8eBscKRafUfe6nCg' },
-                { id: 3, name: 'I Cant Control Myself', category: 'Fnaf', cover: 'https://youtu.be/YgiopHEUcqI?si=iSUWDF9cXE3EzFaO' },
-                { id: 4, name: 'Gatekeeper', category: 'Seguridad', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=GATEKEEPER' },
-                { id: 5, name: 'Ranking', category: 'Social', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=RANKING' },
-                { id: 6, name: 'Mutación', category: 'Música', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=MUTACION' },
-                { id: 7, name: 'Neon Breath', category: 'Arte', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=NEON' },
-                { id: 8, name: 'ZeroFlen', category: 'Core', cover: 'https://via.placeholder.com/300/0d1117/39FF14?text=ZEROFLEN' }
-            ];
+        cargarProyectos() {
             const grid = document.getElementById('galeria-content');
-            grid.innerHTML = proyectos.map(p => `
-                <div class="gallery-card" data-project-id="${p.id}">
+            grid.innerHTML = this.proyectos.map(p => `
+                <div class="gallery-card" data-id="${p.id}" data-youtube-id="${p.youtubeId}">
                     <div class="card-image-wrapper">
                         <img src="${p.cover}" alt="${p.name}" class="card-image" loading="lazy" />
                         <div class="card-overlay">
-                            <button class="decode-btn" data-project-id="${p.id}">[ INICIAR DECODIFICACIÓN ]</button>
+                            <button class="decode-btn" data-id="${p.id}">[ INICIAR DECODIFICACIÓN ]</button>
                         </div>
                         <div class="card-info">
                             <p class="card-title">${p.name}</p>
@@ -499,24 +586,111 @@
             this.modal.querySelectorAll('.decode-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const id = btn.dataset.projectId;
-                    this.decodificar(id);
+                    const id = btn.dataset.id;
+                    const proyecto = this.proyectos.find(p => p.id == id);
+                    if (proyecto && proyecto.youtubeId) {
+                        this.abrirReproductor(proyecto);
+                    } else {
+                        alert('Este proyecto no tiene video disponible');
+                    }
                 });
             });
         }
 
+        abrirReproductor(proyecto) {
+            // Efecto glitch
+            this.modal.classList.add('glitch');
+            setTimeout(() => this.modal.classList.remove('glitch'), 500);
+
+            // Ocultar grid y mostrar reproductor
+            document.getElementById('galeria-content').style.display = 'none';
+            const reproductorContainer = document.getElementById('reproductor-container');
+            reproductorContainer.style.display = 'block';
+
+            // Configurar disco
+            document.getElementById('disco-imagen').src = proyecto.cover;
+
+            // Encontrar índice en la playlist
+            this.currentIndex = this.currentPlaylist.findIndex(p => p.id === proyecto.id);
+            this.cargarVideo(proyecto.youtubeId);
+
+            // Configurar controles
+            document.getElementById('play-pause-btn').addEventListener('click', () => this.togglePlayPause());
+            document.getElementById('prev-btn').addEventListener('click', () => this.reproducirAnterior());
+            document.getElementById('next-btn').addEventListener('click', () => this.reproducirSiguiente());
+        }
+
+        cargarVideo(youtubeId) {
+            if (this.player) {
+                this.player.loadVideoById(youtubeId);
+            } else {
+                this.player = new YouTubePlayer('youtube-player', youtubeId, (player) => {
+                    this.player = player;
+                    this.iniciarSincronizacion();
+                    this.isPlaying = true;
+                    document.getElementById('play-pause-btn').innerHTML = '⏸ PAUSE';
+                });
+            }
+        }
+
+        iniciarSincronizacion() {
+            if (this.progressInterval) clearInterval(this.progressInterval);
+            this.progressInterval = setInterval(() => {
+                if (this.player && this.isPlaying) {
+                    const current = this.player.getCurrentTime();
+                    const duration = this.player.getDuration();
+                    const progress = (current / duration) * 100;
+                    document.getElementById('progress-bar').style.width = progress + '%';
+                    document.getElementById('tiempo-actual').textContent = this.formatTime(current);
+                    document.getElementById('tiempo-duracion').textContent = this.formatTime(duration);
+                }
+            }, 100);
+        }
+
+        formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        togglePlayPause() {
+            if (this.isPlaying) {
+                this.player.pause();
+                document.getElementById('play-pause-btn').innerHTML = '▶ PLAY';
+            } else {
+                this.player.play();
+                document.getElementById('play-pause-btn').innerHTML = '⏸ PAUSE';
+            }
+            this.isPlaying = !this.isPlaying;
+        }
+
+        reproducirSiguiente() {
+            this.currentIndex = (this.currentIndex + 1) % this.currentPlaylist.length;
+            const next = this.currentPlaylist[this.currentIndex];
+            this.cambiarCancion(next);
+        }
+
+        reproducirAnterior() {
+            this.currentIndex = (this.currentIndex - 1 + this.currentPlaylist.length) % this.currentPlaylist.length;
+            const prev = this.currentPlaylist[this.currentIndex];
+            this.cambiarCancion(prev);
+        }
+
+        cambiarCancion(proyecto) {
+            document.getElementById('disco-imagen').src = proyecto.cover;
+            if (this.player) {
+                this.player.loadVideoById(proyecto.youtubeId);
+                this.isPlaying = true;
+                document.getElementById('play-pause-btn').innerHTML = '⏸ PAUSE';
+            }
+        }
+
         cerrar() {
+            if (this.progressInterval) clearInterval(this.progressInterval);
             this.modal.classList.remove('visible');
             setTimeout(() => {
                 this.modal.remove();
             }, 500);
-        }
-
-        decodificar(projectId) {
-            alert(`Decodificando proyecto ${projectId} (función simulada)`);
-            this.cerrar();
-            // Aquí puedes redirigir a una página específica si lo deseas
-            // window.location.href = `/project/${projectId}`;
         }
     }
 
@@ -560,7 +734,7 @@
     }
 
     // Contador regresivo
-    const EXPIRATION_DATE = new Date(2027, 1, 16); // 16 feb 2027
+    const EXPIRATION_DATE = new Date(2027, 1, 16);
     function updateCountdown() {
         const now = new Date();
         const diff = EXPIRATION_DATE - now;
@@ -584,7 +758,6 @@
     // Inicialización
     // --------------------------------------------------------
     async function init() {
-        // Exponer funciones para botones
         window.zeroFlenUI = {
             recargar_datos: loadLobbyData,
             mostrar_status: () => {
@@ -594,17 +767,14 @@
             }
         };
 
-        // Iniciar contadores
         updateCountdown();
         setInterval(updateCountdown, 1000);
         setInterval(updateTimestampBadge, 1000);
 
-        // Cargar datos del lobby
         await loadLobbyData();
 
         rankingManager = new RankingManager();
 
-        // Verificar localStorage
         const stored = localStorage.getItem('observer');
         if (stored) {
             try {
@@ -635,10 +805,8 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
-        // Crear menú (puede ser con o sin observer)
         const menu = new MenuSidebar(currentObserver);
 
-        // Listeners para botones móviles
         if (DOM.btnToggleRankingMobile) {
             DOM.btnToggleRankingMobile.addEventListener('click', () => {
                 DOM.rankingSidebar.classList.toggle('visible');
@@ -650,7 +818,6 @@
             });
         }
 
-        // Móvil: toggle ranking (botón antiguo, lo dejamos por compatibilidad)
         if (DOM.btnToggleRanking) {
             DOM.btnToggleRanking.addEventListener('click', () => {
                 DOM.rankingSidebar.classList.toggle('visible');
