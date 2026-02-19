@@ -1,6 +1,5 @@
 /**
- * ZeroFlen v0.2 - Con Supabase (ranking global) + Reproductor persistente
- * Versión completa y funcional con mini reproductor en lobby y seek en barras
+ * ZeroFlen v0.5 - Con Supabase (ranking global) + Reproductor persistente + Comunidad en tiempo real
  */
 
 (function() {
@@ -62,6 +61,7 @@
         menuProfileName: document.getElementById('profile-name'),
         menuColorDot: document.getElementById('profile-color-dot'),
         btnGaleria: document.getElementById('btn-galeria'),
+        btnComunidad: document.getElementById('btn-comunidad'),
         menuPreview: document.getElementById('menu-gallery-preview'),
         menuSidebar: document.querySelector('.menu-sidebar'),
 
@@ -79,7 +79,6 @@
         miniClose: document.getElementById('mini-close'),
         musicToggleBtn: document.getElementById('music-toggle-btn'),
         musicToggleIcon: document.getElementById('music-toggle-icon'),
-        // Nuevos elementos para la barra de progreso del mini reproductor
         miniProgressContainer: document.getElementById('mini-progress-container'),
         miniProgressBar: document.getElementById('mini-progress-bar'),
         miniProgressTooltip: document.getElementById('mini-progress-tooltip')
@@ -88,7 +87,7 @@
     // --------------------------------------------------------
     // Estado global
     // --------------------------------------------------------
-    let currentObserver = null; // { name, color, country }
+    let currentObserver = null; // { id, name, color, country }
     let rankingManager = null;
     let nameValidator = null;
     let colorSelector = null;
@@ -311,15 +310,10 @@
 
         updateUI(state) {
             if (state.current) {
-                // Actualizar cover y título
                 this.cover.src = state.current.cover;
                 this.toggleIcon.src = state.current.cover;
                 this.title.textContent = state.current.name;
-
-                // Actualizar botón play/pause
                 this.playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
-
-                // Rotación del cover
                 if (state.isPlaying) {
                     this.cover.classList.add('reproduciendo');
                     this.toggleIcon.style.animationPlayState = 'running';
@@ -327,19 +321,14 @@
                     this.cover.classList.remove('reproduciendo');
                     this.toggleIcon.style.animationPlayState = 'paused';
                 }
-
-                // Actualizar barra de progreso
                 const progress = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
                 this.progressBar.style.width = progress + '%';
-
-                // Mostrar/ocultar botón flotante
                 if (!this.isVisible) {
                     this.toggleBtn.style.display = 'flex';
                 } else {
                     this.toggleBtn.style.display = 'none';
                 }
             } else {
-                // No hay canción
                 this.container.style.display = 'none';
                 this.toggleBtn.style.display = 'none';
             }
@@ -347,7 +336,7 @@
     }
 
     // --------------------------------------------------------
-    // NameValidator con debounce (consulta Supabase)
+    // NameValidator con debounce
     // --------------------------------------------------------
     class NameValidator {
         constructor() {
@@ -358,12 +347,8 @@
         }
 
         validar_formato(nombre) {
-            if (!nombre || nombre.length < this.minLength) {
-                return { valid: false, msg: 'Mínimo 3 caracteres' };
-            }
-            if (!this.pattern.test(nombre)) {
-                return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
-            }
+            if (!nombre || nombre.length < this.minLength) return { valid: false, msg: 'Mínimo 3 caracteres' };
+            if (!this.pattern.test(nombre)) return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
             return { valid: true, msg: '' };
         }
 
@@ -374,13 +359,9 @@
                     .select('name')
                     .eq('name', nombre)
                     .maybeSingle();
-
                 if (error) throw error;
                 const exists = data !== null;
-                return {
-                    valid: !exists,
-                    msg: exists ? '❌ Nombre ya existe' : '✅ Nombre disponible'
-                };
+                return { valid: !exists, msg: exists ? '❌ Nombre ya existe' : '✅ Nombre disponible' };
             } catch (error) {
                 console.error('Error validando unicidad:', error);
                 return { valid: false, msg: 'Error al validar' };
@@ -391,7 +372,6 @@
             clearTimeout(this.debounceTimer);
             const formatoOk = this.validar_formato(nombre);
             if (!formatoOk.valid) return formatoOk;
-
             return new Promise(resolve => {
                 this.debounceTimer = setTimeout(async () => {
                     const unicidadOk = await this.validar_unicidad(nombre);
@@ -469,7 +449,6 @@
     async function acceder() {
         const nombre = DOM.nameInput.value.trim();
         const color = colorSelector.selected.hex;
-
         let country = '🏳️';
         try {
             const ipRes = await fetch('https://ipapi.co/json/');
@@ -490,21 +469,21 @@
         try {
             const { data, error } = await supabaseClient
                 .from('observers')
-                .insert([
-                    { name: nombre, color: color, country: country, accesses: 1 }
-                ])
+                .insert([{ name: nombre, color: color, country: country, accesses: 1 }])
                 .select();
 
             if (error) {
-                if (error.code === '23505') {
-                    alert('Error: el nombre ya existe');
-                } else {
-                    alert('Error al registrar: ' + error.message);
-                }
+                if (error.code === '23505') alert('Error: el nombre ya existe');
+                else alert('Error al registrar: ' + error.message);
                 return;
             }
 
-            const observer = { name: nombre, color: color, country: country };
+            const observer = {
+                id: data[0].id,
+                name: data[0].name,
+                color: data[0].color,
+                country: data[0].country
+            };
             localStorage.setItem('observer', JSON.stringify(observer));
             currentObserver = observer;
             cerrarGatekeeper();
@@ -520,13 +499,8 @@
         }
     }
 
-    function cerrarGatekeeper() {
-        DOM.gatekeeperModal.classList.remove('active');
-    }
-
-    function abrirGatekeeper() {
-        DOM.gatekeeperModal.classList.add('active');
-    }
+    function cerrarGatekeeper() { DOM.gatekeeperModal.classList.remove('active'); }
+    function abrirGatekeeper() { DOM.gatekeeperModal.classList.add('active'); }
 
     // --------------------------------------------------------
     // RankingManager (con Supabase)
@@ -543,17 +517,10 @@
                     .from('observers')
                     .select('name, color, country, accesses')
                     .order('accesses', { ascending: false });
-
                 if (error) throw error;
-
-                this.observers = data.map((obs, index) => ({
-                    rank: index + 1,
-                    ...obs
-                }));
+                this.observers = data.map((obs, index) => ({ rank: index + 1, ...obs }));
                 this.render_ranking();
-                if (currentObserver) {
-                    this.actualizar_observador_actual();
-                }
+                if (currentObserver) this.actualizar_observador_actual();
             } catch (error) {
                 console.error('Error cargando ranking:', error);
             }
@@ -582,7 +549,7 @@
         actualizar_observador_actual() {
             const obs = this.observers.find(o => o.name === currentObserver.name);
             if (obs) {
-                const html = `
+                DOM.rankingCurrent.innerHTML = `
                     <p class="current-label">TÚ ERES:</p>
                     <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
                     <div class="current-details">
@@ -591,14 +558,11 @@
                         <p class="current-accesses">Accesos: ${obs.accesses.toLocaleString()}</p>
                     </div>
                 `;
-                DOM.rankingCurrent.innerHTML = html;
             } else {
                 DOM.rankingCurrent.innerHTML = `
                     <p class="current-label">TÚ ERES:</p>
                     <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
-                    <div class="current-details">
-                        <p>Esperando datos...</p>
-                    </div>
+                    <div class="current-details"><p>Esperando datos...</p></div>
                 `;
             }
         }
@@ -611,19 +575,14 @@
                     .select('accesses')
                     .eq('name', currentObserver.name)
                     .single();
-
                 if (selectError) throw selectError;
-
                 if (obs) {
                     const newAccesses = obs.accesses + 1;
-                    const { error: updateError } = await supabaseClient
+                    await supabaseClient
                         .from('observers')
                         .update({ accesses: newAccesses, last_access: new Date() })
                         .eq('name', currentObserver.name);
-
-                    if (updateError) throw updateError;
                 }
-
                 await this.cargar_ranking();
             } catch (error) {
                 console.error('Error en check-in:', error);
@@ -634,64 +593,13 @@
             if (this.updateInterval) clearInterval(this.updateInterval);
             this.updateInterval = setInterval(() => this.cargar_ranking(), 5000);
         }
-
         stop_auto_update() {
-            if (this.updateInterval) {
-                clearInterval(this.updateInterval);
-                this.updateInterval = null;
-            }
+            if (this.updateInterval) { clearInterval(this.updateInterval); this.updateInterval = null; }
         }
     }
 
     // --------------------------------------------------------
-    // Menú Sidebar
-    // --------------------------------------------------------
-    class MenuSidebar {
-        constructor(observer) {
-            this.observer = observer;
-            this.actualizarPerfil();
-            DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
-            this.cargarPreview();
-        }
-
-        actualizarPerfil() {
-            if (this.observer) {
-                DOM.menuProfileName.textContent = this.observer.name;
-                DOM.menuColorDot.style.color = this.observer.color;
-                DOM.menuColorDot.style.backgroundColor = this.observer.color;
-            } else {
-                DOM.menuProfileName.textContent = 'Invitado';
-                DOM.menuColorDot.style.backgroundColor = '#39FF14';
-            }
-        }
-
-        async cargarPreview() {
-            const proyectos = [
-                { id: 1, name: 'Brighter', category: 'Hazbin Hotel', youtubeId: 'eTpEdZoAYbM', cover: 'https://img.youtube.com/vi/eTpEdZoAYbM/0.jpg' },
-                { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', youtubeId: 'FxOFYp_ZA8M', cover: 'https://img.youtube.com/vi/FxOFYp_ZA8M/0.jpg' },
-                { id: 3, name: 'I Cant Control Myself', category: 'Fnaf', youtubeId: 'YgiopHEUcqI', cover: 'https://img.youtube.com/vi/YgiopHEUcqI/0.jpg' }
-            ];
-            DOM.menuPreview.innerHTML = proyectos.map(p => `
-                <div class="gallery-card preview-card" data-id="${p.id}" data-youtube-id="${p.youtubeId}">
-                    <div class="card-image-wrapper">
-                        <img src="${p.cover}" alt="${p.name}" class="card-image" loading="lazy">
-                        <div class="card-info">
-                            <p class="card-title">${p.name}</p>
-                            <p class="card-subtitle">${p.category}</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        abrirGaleria() {
-            const galeria = new GaleriaModal();
-            galeria.abrir();
-        }
-    }
-
-    // --------------------------------------------------------
-    // Galería Modal (usa el reproductor global) con barra de progreso interactiva
+    // Galería Modal (sin cambios)
     // --------------------------------------------------------
     class GaleriaModal {
         constructor() {
@@ -729,7 +637,6 @@
                             <div class="disco-container">
                                 <img id="disco-imagen" class="disco-rotatorio" src="" alt="cover">
                             </div>
-                            <!-- Barra de progreso interactiva con tooltip -->
                             <div class="progress-bar-container" id="progress-bar-container">
                                 <div class="progress-bar-neon" id="progress-bar" style="width: 0%;"></div>
                                 <div class="progress-tooltip" id="progress-tooltip" style="display: none;">0:00</div>
@@ -797,18 +704,13 @@
         abrirReproductor(proyecto) {
             this.modal.classList.add('glitch');
             setTimeout(() => this.modal.classList.remove('glitch'), 500);
-
             document.getElementById('galeria-content').style.display = 'none';
             const reproductorContainer = document.getElementById('reproductor-container');
             reproductorContainer.style.display = 'block';
-
             document.getElementById('disco-imagen').src = proyecto.cover;
-
             document.getElementById('play-pause-btn').addEventListener('click', () => MusicPlayer.togglePlayPause());
             document.getElementById('prev-btn').addEventListener('click', () => MusicPlayer.prev());
             document.getElementById('next-btn').addEventListener('click', () => MusicPlayer.next());
-
-            // Configurar la barra de progreso interactiva
             this.setupProgressBar();
         }
 
@@ -816,7 +718,6 @@
             const container = this.modal.querySelector('#progress-bar-container');
             const tooltip = this.modal.querySelector('#progress-tooltip');
             const bar = this.modal.querySelector('#progress-bar');
-
             container.addEventListener('mousemove', (e) => {
                 const rect = container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -829,11 +730,7 @@
                     tooltip.style.display = 'block';
                 }
             });
-
-            container.addEventListener('mouseleave', () => {
-                tooltip.style.display = 'none';
-            });
-
+            container.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
             container.addEventListener('click', (e) => {
                 const rect = container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -850,7 +747,6 @@
             if (!this.modal) return;
             const reproductorVisible = document.getElementById('reproductor-container').style.display === 'block';
             if (!reproductorVisible) return;
-
             if (state.current) {
                 document.getElementById('disco-imagen').src = state.current.cover;
                 document.getElementById('play-pause-btn').textContent = state.isPlaying ? '⏸ PAUSE' : '▶ PLAY';
@@ -861,19 +757,202 @@
                 document.getElementById('tiempo-actual').textContent = formatTime(current);
                 document.getElementById('tiempo-duracion').textContent = formatTime(duration);
                 const disco = document.getElementById('disco-imagen');
-                if (state.isPlaying) {
-                    disco.classList.add('reproduciendo');
-                } else {
-                    disco.classList.remove('reproduciendo');
-                }
+                if (state.isPlaying) disco.classList.add('reproduciendo');
+                else disco.classList.remove('reproduciendo');
             }
         }
 
         cerrar() {
             this.modal.classList.remove('visible');
+            setTimeout(() => { this.modal.remove(); }, 500);
+        }
+    }
+
+    // --------------------------------------------------------
+    // Modal Comunidad (en tiempo real)
+    // --------------------------------------------------------
+    class ComunidadModal {
+        constructor() {
+            this.modal = null;
+            this.mensajesContainer = null;
+            this.input = null;
+            this.btnTransmitir = null;
+            this.unsubscribe = null;
+        }
+
+        abrir() {
+            this.crearModal();
+            this.modal.classList.add('visible');
+            this.cargarMensajes();
+            this.suscribirseANuevosMensajes();
+        }
+
+        crearModal() {
+            this.modal = document.getElementById('comunidad-modal');
+            if (!this.modal) {
+                const html = `
+                    <div id="comunidad-modal" class="comunidad-modal">
+                        <div class="comunidad-overlay"></div>
+                        <div class="comunidad-container">
+                            <div class="comunidad-header">
+                                <h2>📡 FRECUENCIA COMUNIDAD</h2>
+                                <button class="btn-close-comunidad">✕</button>
+                            </div>
+                            <div class="comunidad-mensajes" id="comunidad-mensajes"></div>
+                            <div class="comunidad-input-area">
+                                <input type="text" id="comunidad-input" class="comunidad-input" placeholder="Escribe tu mensaje..." maxlength="200">
+                                <button class="btn-transmitir" id="btn-transmitir">TRANSMITIR</button>
+                            </div>
+                            <div class="comunidad-footer">
+                                <button class="btn-volver-comunidad">◄ VOLVER AL LOBBY</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', html);
+                this.modal = document.getElementById('comunidad-modal');
+            }
+            this.mensajesContainer = document.getElementById('comunidad-mensajes');
+            this.input = document.getElementById('comunidad-input');
+            this.btnTransmitir = document.getElementById('btn-transmitir');
+            this.agregarEventos();
+        }
+
+        agregarEventos() {
+            this.modal.querySelector('.btn-close-comunidad').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.btn-volver-comunidad').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.comunidad-overlay').addEventListener('click', () => this.cerrar());
+            this.btnTransmitir.addEventListener('click', () => this.enviarMensaje());
+            this.input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.enviarMensaje();
+            });
+        }
+
+        async cargarMensajes() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('messages')
+                    .select(`
+                        id,
+                        contenido,
+                        created_at,
+                        autor_id,
+                        observers!inner(name, color, country)
+                    `)
+                    .order('created_at', { ascending: true });
+                if (error) throw error;
+                this.mostrarMensajes(data);
+            } catch (error) {
+                console.error('Error cargando mensajes:', error);
+            }
+        }
+
+        mostrarMensajes(mensajes) {
+            this.mensajesContainer.innerHTML = '';
+            mensajes.forEach(msg => {
+                const mensajeDiv = document.createElement('div');
+                mensajeDiv.className = 'mensaje';
+                const autor = msg.observers;
+                const inicial = autor.name.charAt(0).toUpperCase();
+                const tiempo = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                mensajeDiv.innerHTML = `
+                    <div class="mensaje-avatar" style="background: ${autor.color};">${inicial}</div>
+                    <div class="mensaje-contenido">
+                        <div class="mensaje-header">
+                            <span class="mensaje-autor" style="color: ${autor.color};">${autor.name}</span>
+                            <span class="mensaje-tiempo">${tiempo}</span>
+                        </div>
+                        <div class="mensaje-texto">${msg.contenido}</div>
+                    </div>
+                `;
+                this.mensajesContainer.appendChild(mensajeDiv);
+            });
+            this.mensajesContainer.scrollTop = this.mensajesContainer.scrollHeight;
+        }
+
+        suscribirseANuevosMensajes() {
+            this.unsubscribe = supabaseClient
+                .channel('messages')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+                    this.cargarMensajes();
+                })
+                .subscribe();
+        }
+
+        async enviarMensaje() {
+            const contenido = this.input.value.trim();
+            if (!contenido || !currentObserver) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('messages')
+                    .insert([{ contenido, autor_id: currentObserver.id }]);
+                if (error) throw error;
+                this.input.value = '';
+            } catch (error) {
+                console.error('Error enviando mensaje:', error);
+                alert('Error al enviar mensaje');
+            }
+        }
+
+        cerrar() {
+            if (this.unsubscribe) this.unsubscribe.unsubscribe();
+            this.modal.classList.remove('visible');
             setTimeout(() => {
                 this.modal.remove();
             }, 500);
+        }
+    }
+
+    // --------------------------------------------------------
+    // Menú Sidebar
+    // --------------------------------------------------------
+    class MenuSidebar {
+        constructor(observer) {
+            this.observer = observer;
+            this.actualizarPerfil();
+            DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
+            DOM.btnComunidad.addEventListener('click', () => this.abrirComunidad());
+            this.cargarPreview();
+        }
+
+        actualizarPerfil() {
+            if (this.observer) {
+                DOM.menuProfileName.textContent = this.observer.name;
+                DOM.menuColorDot.style.color = this.observer.color;
+                DOM.menuColorDot.style.backgroundColor = this.observer.color;
+            } else {
+                DOM.menuProfileName.textContent = 'Invitado';
+                DOM.menuColorDot.style.backgroundColor = '#39FF14';
+            }
+        }
+
+        async cargarPreview() {
+            const proyectos = [
+                { id: 1, name: 'Brighter', category: 'Hazbin Hotel', youtubeId: 'eTpEdZoAYbM', cover: 'https://img.youtube.com/vi/eTpEdZoAYbM/0.jpg' },
+                { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', youtubeId: 'FxOFYp_ZA8M', cover: 'https://img.youtube.com/vi/FxOFYp_ZA8M/0.jpg' },
+                { id: 3, name: 'I Cant Control Myself', category: 'Fnaf', youtubeId: 'YgiopHEUcqI', cover: 'https://img.youtube.com/vi/YgiopHEUcqI/0.jpg' }
+            ];
+            DOM.menuPreview.innerHTML = proyectos.map(p => `
+                <div class="gallery-card preview-card" data-id="${p.id}" data-youtube-id="${p.youtubeId}">
+                    <div class="card-image-wrapper">
+                        <img src="${p.cover}" alt="${p.name}" class="card-image" loading="lazy">
+                        <div class="card-info">
+                            <p class="card-title">${p.name}</p>
+                            <p class="card-subtitle">${p.category}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        abrirGaleria() {
+            const galeria = new GaleriaModal();
+            galeria.abrir();
+        }
+
+        abrirComunidad() {
+            const comunidad = new ComunidadModal();
+            comunidad.abrir();
         }
     }
 
@@ -927,10 +1006,7 @@
     function updateCountdown() {
         const now = new Date();
         const diff = EXPIRATION_DATE - now;
-        if (diff <= 0) {
-            DOM.countdown.textContent = '0d 00h 00m 00s';
-            return;
-        }
+        if (diff <= 0) { DOM.countdown.textContent = '0d 00h 00m 00s'; return; }
         const seconds = Math.floor(diff / 1000) % 60;
         const minutes = Math.floor(diff / (1000 * 60)) % 60;
         const hours = Math.floor(diff / (1000 * 60 * 60)) % 24;
@@ -952,7 +1028,7 @@
             mostrar_status: () => {
                 const days = DOM.countdown.textContent;
                 const budget = DOM.budget.textContent;
-                alert(`ZeroFlen v0.2\nTiempo restante: ${days}\nSaldo: ${budget}`);
+                alert(`ZeroFlen v0.5\nTiempo restante: ${days}\nSaldo: ${budget}`);
             }
         };
 
@@ -961,17 +1037,44 @@
         setInterval(updateTimestampBadge, 1000);
 
         await loadLobbyData();
-
         rankingManager = new RankingManager();
 
         const stored = localStorage.getItem('observer');
         if (stored) {
             try {
                 currentObserver = JSON.parse(stored);
-                DOM.gatekeeperModal.classList.remove('active');
-                await rankingManager.cargar_ranking();
-                rankingManager.start_auto_update();
-                await rankingManager.registrar_acceso();
+                
+                // Si el observador guardado no tiene id (usuarios antiguos), lo obtenemos de Supabase
+                if (!currentObserver.id) {
+                    console.log('Usuario antiguo sin id, obteniendo de Supabase...');
+                    const { data, error } = await supabaseClient
+                        .from('observers')
+                        .select('id')
+                        .eq('name', currentObserver.name)
+                        .maybeSingle();
+                    
+                    if (error) {
+                        console.error('Error al obtener id del observador:', error);
+                    } else if (data) {
+                        currentObserver.id = data.id;
+                        // Actualizamos localStorage con el id
+                        localStorage.setItem('observer', JSON.stringify(currentObserver));
+                        console.log('id obtenido y guardado:', currentObserver.id);
+                    } else {
+                        console.warn('No se encontró el observador en la base de datos');
+                        // Si no se encuentra, forzamos un nuevo registro
+                        localStorage.removeItem('observer');
+                        currentObserver = null;
+                        abrirGatekeeper();
+                    }
+                }
+
+                if (currentObserver) {
+                    DOM.gatekeeperModal.classList.remove('active');
+                    await rankingManager.cargar_ranking();
+                    rankingManager.start_auto_update();
+                    await rankingManager.registrar_acceso();
+                }
             } catch (e) {
                 console.warn('Error al parsear localStorage, limpiando...', e);
                 localStorage.removeItem('observer');
@@ -981,7 +1084,6 @@
             abrirGatekeeper();
             nameValidator = new NameValidator();
             colorSelector = new ColorSelector();
-
             DOM.nameInput.addEventListener('input', async (e) => {
                 const nombre = e.target.value.trim();
                 DOM.previewName.textContent = nombre || 'Ingresa tu nombre';
@@ -990,34 +1092,23 @@
                 DOM.nameStatus.className = 'name-status ' + (resultado.valid ? 'valid' : 'invalid');
                 validar_completitud();
             });
-
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
         const menu = new MenuSidebar(currentObserver);
 
-        // Crear mini reproductor en lobby
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
-            const miniPlayer = new MiniPlayerLobby();
-        } else {
-            console.warn('Elementos del mini reproductor no encontrados en el DOM. Asegúrate de haber añadido el HTML correspondiente.');
+            new MiniPlayerLobby();
         }
 
         if (DOM.btnToggleRankingMobile) {
-            DOM.btnToggleRankingMobile.addEventListener('click', () => {
-                DOM.rankingSidebar.classList.toggle('visible');
-            });
+            DOM.btnToggleRankingMobile.addEventListener('click', () => DOM.rankingSidebar.classList.toggle('visible'));
         }
         if (DOM.btnToggleMenuMobile) {
-            DOM.btnToggleMenuMobile.addEventListener('click', () => {
-                document.querySelector('.menu-sidebar').classList.toggle('visible');
-            });
+            DOM.btnToggleMenuMobile.addEventListener('click', () => document.querySelector('.menu-sidebar').classList.toggle('visible'));
         }
-
         if (DOM.btnToggleRanking) {
-            DOM.btnToggleRanking.addEventListener('click', () => {
-                DOM.rankingSidebar.classList.toggle('visible');
-            });
+            DOM.btnToggleRanking.addEventListener('click', () => DOM.rankingSidebar.classList.toggle('visible'));
         }
     }
 
