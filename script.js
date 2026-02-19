@@ -1,5 +1,6 @@
 /**
  * ZeroFlen v0.5 - Con Supabase (ranking global) + Reproductor persistente + Comunidad en tiempo real
+ * Versión con mensajes instantáneos y suscripción mejorada
  */
 
 (function() {
@@ -769,7 +770,7 @@
     }
 
     // --------------------------------------------------------
-    // Modal Comunidad (en tiempo real)
+    // Modal Comunidad (en tiempo real) con mensajes instantáneos
     // --------------------------------------------------------
     class ComunidadModal {
         constructor() {
@@ -849,33 +850,57 @@
 
         mostrarMensajes(mensajes) {
             this.mensajesContainer.innerHTML = '';
-            mensajes.forEach(msg => {
-                const mensajeDiv = document.createElement('div');
-                mensajeDiv.className = 'mensaje';
-                const autor = msg.observers;
-                const inicial = autor.name.charAt(0).toUpperCase();
-                const tiempo = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                mensajeDiv.innerHTML = `
-                    <div class="mensaje-avatar" style="background: ${autor.color};">${inicial}</div>
-                    <div class="mensaje-contenido">
-                        <div class="mensaje-header">
-                            <span class="mensaje-autor" style="color: ${autor.color};">${autor.name}</span>
-                            <span class="mensaje-tiempo">${tiempo}</span>
-                        </div>
-                        <div class="mensaje-texto">${msg.contenido}</div>
+            mensajes.forEach(msg => this.agregarMensajeAlDOM(msg));
+            this.scrollAlFinal();
+        }
+
+        agregarMensajeAlDOM(msg) {
+            const mensajeDiv = document.createElement('div');
+            mensajeDiv.className = 'mensaje';
+            const autor = msg.observers;
+            const inicial = autor.name.charAt(0).toUpperCase();
+            const tiempo = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            mensajeDiv.innerHTML = `
+                <div class="mensaje-avatar" style="background: ${autor.color};">${inicial}</div>
+                <div class="mensaje-contenido">
+                    <div class="mensaje-header">
+                        <span class="mensaje-autor" style="color: ${autor.color};">${autor.name}</span>
+                        <span class="mensaje-tiempo">${tiempo}</span>
                     </div>
-                `;
-                this.mensajesContainer.appendChild(mensajeDiv);
-            });
+                    <div class="mensaje-texto">${msg.contenido}</div>
+                </div>
+            `;
+            this.mensajesContainer.appendChild(mensajeDiv);
+        }
+
+        scrollAlFinal() {
             this.mensajesContainer.scrollTop = this.mensajesContainer.scrollHeight;
         }
 
         suscribirseANuevosMensajes() {
             this.unsubscribe = supabaseClient
-                .channel('messages')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-                    this.cargarMensajes();
-                })
+                .channel('messages-channel')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'messages' }, 
+                    async (payload) => {
+                        // Obtenemos los datos completos del autor usando el autor_id del payload
+                        const { data: autorData, error } = await supabaseClient
+                            .from('observers')
+                            .select('name, color, country')
+                            .eq('id', payload.new.autor_id)
+                            .single();
+                        if (!error && autorData) {
+                            const nuevoMensaje = {
+                                ...payload.new,
+                                observers: autorData
+                            };
+                            this.agregarMensajeAlDOM(nuevoMensaje);
+                            this.scrollAlFinal();
+                        } else {
+                            // Si falla, recargamos todo (por si acaso)
+                            this.cargarMensajes();
+                        }
+                    })
                 .subscribe();
         }
 
@@ -883,10 +908,25 @@
             const contenido = this.input.value.trim();
             if (!contenido || !currentObserver) return;
             try {
-                const { error } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('messages')
-                    .insert([{ contenido, autor_id: currentObserver.id }]);
+                    .insert([{ contenido, autor_id: currentObserver.id }])
+                    .select();  // Para obtener el mensaje insertado con su id y created_at
+
                 if (error) throw error;
+
+                // Añadimos manualmente el mensaje con los datos del autor actual
+                const nuevoMensaje = {
+                    ...data[0],
+                    observers: {
+                        name: currentObserver.name,
+                        color: currentObserver.color,
+                        country: currentObserver.country
+                    }
+                };
+                this.agregarMensajeAlDOM(nuevoMensaje);
+                this.scrollAlFinal();
+
                 this.input.value = '';
             } catch (error) {
                 console.error('Error enviando mensaje:', error);
