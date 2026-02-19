@@ -112,23 +112,24 @@
                     </div>
                 </div>
 
-                <!-- MINI REPRODUCTOR (colapsable) con barra de progreso -->
+                                <!-- MINI REPRODUCTOR (colapsable) con barra de progreso -->
                 <div class="mini-player-container" id="mini-player-container" style="display: none;">
                     <div class="mini-player">
-                        <div class="mini-player-info">
-                            <img class="mini-player-cover" id="mini-player-cover" src="" alt="cover">
-                            <span class="mini-player-title" id="mini-player-title">-</span>
+                        <div class="mini-player-top">
+                            <div class="mini-player-info">
+                                <img class="mini-player-cover" id="mini-player-cover" src="" alt="cover">
+                                <span class="mini-player-title" id="mini-player-title">-</span>
+                            </div>
+                            <div class="mini-player-controls">
+                                <button class="mini-btn" id="mini-prev">⏮</button>
+                                <button class="mini-btn" id="mini-play-pause">▶</button>
+                                <button class="mini-btn" id="mini-next">⏭</button>
+                                <button class="mini-btn" id="mini-close">✕</button>
+                            </div>
                         </div>
-                        <!-- Barra de progreso interactiva -->
                         <div class="mini-player-progress-container" id="mini-progress-container">
                             <div class="mini-progress-bar" id="mini-progress-bar" style="width: 0%;"></div>
                             <div class="progress-tooltip" id="mini-progress-tooltip" style="display: none;">0:00</div>
-                        </div>
-                        <div class="mini-player-controls">
-                            <button class="mini-btn" id="mini-prev">⏮</button>
-                            <button class="mini-btn" id="mini-play-pause">▶</button>
-                            <button class="mini-btn" id="mini-next">⏭</button>
-                            <button class="mini-btn" id="mini-close">✕</button>
                         </div>
                     </div>
                 </div>

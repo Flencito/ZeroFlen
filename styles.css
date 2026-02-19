@@ -1138,41 +1138,47 @@ body {
     100% { transform: skew(0deg, 0deg); opacity: 1; }
 }
 
-/* ============ MINI REPRODUCTOR FLOTANTE (CENTRADO) ============ */
+/* ============ MINI REPRODUCTOR FLOTANTE (REDISEÑADO) ============ */
 .mini-player-container {
     position: fixed;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    width: 400px;
+    width: 450px;
     max-width: 90vw;
     z-index: 1500;
     background: rgba(20, 20, 30, 0.95);
     border: 1px solid var(--color-primary);
     border-radius: 8px;
-    padding: 12px 16px;
+    padding: 15px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.7), 0 0 30px var(--color-primary);
     backdrop-filter: blur(5px);
-    display: none; /* Controlado por JS */
+    display: none;
 }
 
 .mini-player {
     display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mini-player-top {
+    display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .mini-player-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex: 1;
-    min-width: 0; /* Para permitir text-overflow */
+    min-width: 0;
 }
 
 .mini-player-cover {
-    width: 48px;
-    height: 48px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--color-primary);
@@ -1220,6 +1226,41 @@ body {
     color: var(--color-darker);
 }
 
+.mini-player-progress-container {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    cursor: pointer;
+    overflow: visible;
+    margin-top: 5px;
+}
+
+.mini-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    box-shadow: 0 0 10px var(--color-primary);
+    transition: width 0.1s linear;
+}
+
+.progress-tooltip {
+    position: absolute;
+    bottom: 15px;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--color-primary);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+}
+
 /* Botón flotante de música (cuando el reproductor está colapsado) */
 .music-toggle-btn {
     position: fixed;
@@ -1259,31 +1300,21 @@ body {
 @media (max-width: 600px) {
     .mini-player-container {
         width: 95vw;
-        bottom: 20px;
         padding: 10px;
     }
 
-    .mini-player {
-        gap: 10px;
+    .mini-player-top {
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .mini-player-info {
-        gap: 8px;
+        width: 100%;
+        justify-content: center;
     }
 
-    .mini-player-cover {
-        width: 40px;
-        height: 40px;
-    }
-
-    .mini-player-title {
-        font-size: 0.85rem;
-    }
-
-    .mini-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 1rem;
+    .mini-player-controls {
+        justify-content: center;
     }
 
     .music-toggle-btn {
@@ -1447,15 +1478,12 @@ body {
         height: 25px;
     }
 
-    .mini-player {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .mini-player-info {
-        justify-content: center;
-    }
-    .mini-player-controls {
-        justify-content: center;
+    /* Ajuste del botón decodificar en móvil */
+    .decode-btn {
+        font-size: 0.55rem;
+        padding: 6px 8px;
+        white-space: normal;
+        max-width: 90%;
     }
 }
 
@@ -1506,22 +1534,4 @@ body {
     z-index: 10;
 }
 
-/* Barra de progreso para mini reproductor */
-.mini-player-progress-container {
-    position: relative;
-    width: 100%;
-    height: 4px;
-    background: var(--color-border);
-    border-radius: 2px;
-    margin: 5px 0;
-    cursor: pointer;
-    overflow: visible;
-}
-
-.mini-progress-bar {
-    height: 100%;
-    width: 0%;
-    background: var(--color-primary);
-    box-shadow: 0 0 10px var(--color-primary);
-    transition: width 0.1s linear;
-}
+/* Barra de progreso para mini reproductor (ya incluida arriba) */
