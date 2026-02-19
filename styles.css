@@ -1138,22 +1138,26 @@ body {
     100% { transform: skew(0deg, 0deg); opacity: 1; }
 }
 
-/* ============ MINI REPRODUCTOR EN LOBBY ============ */
+/* ============ MINI REPRODUCTOR FLOTANTE ============ */
 .mini-player-container {
-    margin: 20px 0;
-    background: rgba(30, 30, 30, 0.5);
+    position: fixed;
+    bottom: 100px;      /* Por encima de los botones móviles */
+    right: 20px;
+    width: 320px;
+    z-index: 1500;
+    background: rgba(20, 20, 30, 0.95);
     border: 1px solid var(--color-primary);
     border-radius: 8px;
-    padding: 10px;
-    transition: all 0.3s ease;
+    padding: 12px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7), 0 0 30px var(--color-primary);
+    backdrop-filter: blur(5px);
+    display: none; /* Controlado por JS */
 }
 
 .mini-player {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .mini-player-info {
@@ -1161,11 +1165,12 @@ body {
     align-items: center;
     gap: 10px;
     flex: 1;
+    min-width: 0; /* Para permitir text-overflow */
 }
 
 .mini-player-cover {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--color-primary);
@@ -1181,15 +1186,16 @@ body {
     font-family: var(--font-mono);
     color: var(--color-primary);
     font-size: 0.9rem;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
 }
 
 .mini-player-controls {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .mini-btn {
@@ -1212,24 +1218,29 @@ body {
     color: var(--color-darker);
 }
 
-/* Botón flotante de música */
+/* Botón flotante de música (cuando el reproductor está colapsado) */
 .music-toggle-btn {
     position: fixed;
-    bottom: 80px;
+    bottom: 100px;
     right: 20px;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: var(--color-primary);
     border: none;
     cursor: pointer;
-    z-index: 1000;
+    z-index: 1500;
     box-shadow: 0 0 20px var(--color-primary);
     overflow: hidden;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.music-toggle-btn:hover {
+    transform: scale(1.1);
 }
 
 .music-toggle-btn img {
@@ -1239,6 +1250,41 @@ body {
     border-radius: 50%;
     animation: rotar 10s linear infinite;
     animation-play-state: running;
+}
+
+/* Ajuste responsive: en móvil, que ocupe casi todo el ancho */
+@media (max-width: 768px) {
+    .mini-player-container {
+        width: calc(100% - 40px);
+        bottom: 80px;
+        right: 20px;
+        left: 20px;
+    }
+
+    .mini-player {
+        flex-wrap: wrap;
+    }
+
+    .mini-player-info {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .mini-player-controls {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .music-toggle-btn {
+        bottom: 80px;
+        right: 20px;
+    }
+}
+
+/* Animación de rotación (ya definida, pero la mantenemos por si acaso) */
+@keyframes rotar {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* ============ BOTONES FLOTANTES MÓVIL ============ */
