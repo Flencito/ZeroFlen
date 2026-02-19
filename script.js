@@ -1,6 +1,6 @@
 /**
  * ZeroFlen v0.2 - Con Supabase (ranking global) + Reproductor persistente
- * Versión completa y funcional
+ * Versión completa y funcional con mini reproductor en lobby
  */
 
 (function() {
@@ -67,7 +67,18 @@
 
         // Botones móvil
         btnToggleRankingMobile: document.getElementById('btn-toggle-ranking-mobile'),
-        btnToggleMenuMobile: document.getElementById('btn-toggle-menu-mobile')
+        btnToggleMenuMobile: document.getElementById('btn-toggle-menu-mobile'),
+
+        // Mini reproductor (nuevo)
+        miniPlayerContainer: document.getElementById('mini-player-container'),
+        miniPlayerCover: document.getElementById('mini-player-cover'),
+        miniPlayerTitle: document.getElementById('mini-player-title'),
+        miniPlayPause: document.getElementById('mini-play-pause'),
+        miniPrev: document.getElementById('mini-prev'),
+        miniNext: document.getElementById('mini-next'),
+        miniClose: document.getElementById('mini-close'),
+        musicToggleBtn: document.getElementById('music-toggle-btn'),
+        musicToggleIcon: document.getElementById('music-toggle-icon')
     };
 
     // --------------------------------------------------------
@@ -213,42 +224,74 @@
     })();
 
     // --------------------------------------------------------
-    // Mini‑reproductor en el menú
+    // Mini‑reproductor en el lobby
     // --------------------------------------------------------
-    class MiniPlayer {
+    class MiniPlayerLobby {
         constructor() {
-            this.container = null;
-            this.createUI();
+            this.container = DOM.miniPlayerContainer;
+            this.toggleBtn = DOM.musicToggleBtn;
+            this.toggleIcon = DOM.musicToggleIcon;
+            this.cover = DOM.miniPlayerCover;
+            this.title = DOM.miniPlayerTitle;
+            this.playPauseBtn = DOM.miniPlayPause;
+            this.prevBtn = DOM.miniPrev;
+            this.nextBtn = DOM.miniNext;
+            this.closeBtn = DOM.miniClose;
+            this.isVisible = false; // estado del reproductor expandido
+
+            this.initEventListeners();
             this.unsubscribe = MusicPlayer.onStateChange(state => this.updateUI(state));
         }
 
-        createUI() {
-            const html = `
-                <div id="mini-player" class="mini-player" style="display: none;">
-                    <div class="mini-player-info">
-                        <span class="mini-player-title" id="mini-player-title">-</span>
-                    </div>
-                    <div class="mini-player-controls">
-                        <button class="mini-btn" id="mini-prev">⏮</button>
-                        <button class="mini-btn" id="mini-play-pause">▶</button>
-                        <button class="mini-btn" id="mini-next">⏭</button>
-                    </div>
-                </div>
-            `;
-            DOM.menuSidebar.insertAdjacentHTML('beforeend', html);
-            this.container = document.getElementById('mini-player');
-            document.getElementById('mini-prev').addEventListener('click', () => MusicPlayer.prev());
-            document.getElementById('mini-play-pause').addEventListener('click', () => MusicPlayer.togglePlayPause());
-            document.getElementById('mini-next').addEventListener('click', () => MusicPlayer.next());
+        initEventListeners() {
+            this.playPauseBtn.addEventListener('click', () => MusicPlayer.togglePlayPause());
+            this.prevBtn.addEventListener('click', () => MusicPlayer.prev());
+            this.nextBtn.addEventListener('click', () => MusicPlayer.next());
+            this.closeBtn.addEventListener('click', () => this.hide());
+            this.toggleBtn.addEventListener('click', () => this.show());
+        }
+
+        show() {
+            this.container.style.display = 'block';
+            this.toggleBtn.style.display = 'none';
+            this.isVisible = true;
+        }
+
+        hide() {
+            this.container.style.display = 'none';
+            this.toggleBtn.style.display = 'flex';
+            this.isVisible = false;
         }
 
         updateUI(state) {
             if (state.current) {
-                this.container.style.display = 'flex';
-                document.getElementById('mini-player-title').textContent = state.current.name;
-                document.getElementById('mini-play-pause').textContent = state.isPlaying ? '⏸' : '▶';
+                // Actualizar cover y título
+                this.cover.src = state.current.cover;
+                this.toggleIcon.src = state.current.cover;
+                this.title.textContent = state.current.name;
+
+                // Actualizar botón play/pause
+                this.playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
+
+                // Rotación del cover
+                if (state.isPlaying) {
+                    this.cover.classList.add('reproduciendo');
+                    this.toggleIcon.style.animationPlayState = 'running';
+                } else {
+                    this.cover.classList.remove('reproduciendo');
+                    this.toggleIcon.style.animationPlayState = 'paused';
+                }
+
+                // Mostrar el botón de música si el reproductor está oculto
+                if (!this.isVisible) {
+                    this.toggleBtn.style.display = 'flex';
+                } else {
+                    this.toggleBtn.style.display = 'none';
+                }
             } else {
+                // No hay canción, ocultar todo
                 this.container.style.display = 'none';
+                this.toggleBtn.style.display = 'none';
             }
         }
     }
@@ -559,7 +602,7 @@
             this.actualizarPerfil();
             DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
             this.cargarPreview();
-            new MiniPlayer();
+            // NOTA: Ya no creamos MiniPlayer aquí
         }
 
         actualizarPerfil() {
@@ -864,6 +907,13 @@
         }
 
         const menu = new MenuSidebar(currentObserver);
+
+        // Crear mini reproductor en lobby (si existen los elementos)
+        if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
+            const miniPlayer = new MiniPlayerLobby();
+        } else {
+            console.warn('Elementos del mini reproductor no encontrados en el DOM. Asegúrate de haber añadido el HTML correspondiente.');
+        }
 
         if (DOM.btnToggleRankingMobile) {
             DOM.btnToggleRankingMobile.addEventListener('click', () => {

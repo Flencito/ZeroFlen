@@ -1516,3 +1516,125 @@ body {
     background: var(--color-primary);
     color: var(--color-darker);
 }
+
+/* ============ MINI REPRODUCTOR EN LOBBY ============ */
+.mini-player-container {
+    margin: 20px 0;
+    background: rgba(30, 30, 30, 0.5);
+    border: 1px solid var(--color-primary);
+    border-radius: 8px;
+    padding: 10px;
+    transition: all 0.3s ease;
+}
+
+.mini-player {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.mini-player-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.mini-player-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--color-primary);
+    animation: rotar 10s linear infinite;
+    animation-play-state: paused;
+}
+
+.mini-player-cover.reproduciendo {
+    animation-play-state: running;
+}
+
+.mini-player-title {
+    font-family: var(--font-mono);
+    color: var(--color-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.mini-player-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.mini-btn {
+    background: rgba(57, 255, 20, 0.1);
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.mini-btn:hover {
+    background: var(--color-primary);
+    color: var(--color-darker);
+}
+
+/* Botón flotante de música */
+.music-toggle-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: none;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 0 20px var(--color-primary);
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-toggle-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    animation: rotar 10s linear infinite;
+    animation-play-state: running;
+}
+
+@keyframes rotar {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Ajuste responsive */
+@media (max-width: 768px) {
+    .mini-player {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .mini-player-info {
+        justify-content: center;
+    }
+    .mini-player-controls {
+        justify-content: center;
+    }
+}
