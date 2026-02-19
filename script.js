@@ -1,6 +1,6 @@
 /**
  * ZeroFlen v0.2 - Con Supabase (ranking global) + Reproductor persistente
- * Versión completa y funcional con mini reproductor en lobby
+ * Versión completa y funcional con mini reproductor en lobby y seek en barras
  */
 
 (function() {
@@ -69,7 +69,7 @@
         btnToggleRankingMobile: document.getElementById('btn-toggle-ranking-mobile'),
         btnToggleMenuMobile: document.getElementById('btn-toggle-menu-mobile'),
 
-        // Mini reproductor (nuevo)
+        // Mini reproductor
         miniPlayerContainer: document.getElementById('mini-player-container'),
         miniPlayerCover: document.getElementById('mini-player-cover'),
         miniPlayerTitle: document.getElementById('mini-player-title'),
@@ -78,7 +78,11 @@
         miniNext: document.getElementById('mini-next'),
         miniClose: document.getElementById('mini-close'),
         musicToggleBtn: document.getElementById('music-toggle-btn'),
-        musicToggleIcon: document.getElementById('music-toggle-icon')
+        musicToggleIcon: document.getElementById('music-toggle-icon'),
+        // Nuevos elementos para la barra de progreso del mini reproductor
+        miniProgressContainer: document.getElementById('mini-progress-container'),
+        miniProgressBar: document.getElementById('mini-progress-bar'),
+        miniProgressTooltip: document.getElementById('mini-progress-tooltip')
     };
 
     // --------------------------------------------------------
@@ -201,6 +205,12 @@
             togglePlayPause() {
                 if (isPlaying) this.pause(); else this.play();
             },
+            seekTo(seconds) {
+                if (youtubePlayer) {
+                    youtubePlayer.seekTo(seconds, true);
+                    triggerStateChange();
+                }
+            },
             next() {
                 if (playlist.length === 0) return;
                 currentIndex = (currentIndex + 1) % playlist.length;
@@ -224,7 +234,7 @@
     })();
 
     // --------------------------------------------------------
-    // Mini‑reproductor en el lobby
+    // Mini‑reproductor en el lobby (con barra de progreso)
     // --------------------------------------------------------
     class MiniPlayerLobby {
         constructor() {
@@ -237,9 +247,13 @@
             this.prevBtn = DOM.miniPrev;
             this.nextBtn = DOM.miniNext;
             this.closeBtn = DOM.miniClose;
-            this.isVisible = false; // estado del reproductor expandido
+            this.progressContainer = DOM.miniProgressContainer;
+            this.progressBar = DOM.miniProgressBar;
+            this.progressTooltip = DOM.miniProgressTooltip;
+            this.isVisible = false;
 
             this.initEventListeners();
+            this.setupProgressBar();
             this.unsubscribe = MusicPlayer.onStateChange(state => this.updateUI(state));
         }
 
@@ -249,6 +263,38 @@
             this.nextBtn.addEventListener('click', () => MusicPlayer.next());
             this.closeBtn.addEventListener('click', () => this.hide());
             this.toggleBtn.addEventListener('click', () => this.show());
+        }
+
+        setupProgressBar() {
+            if (!this.progressContainer) return;
+
+            this.progressContainer.addEventListener('mousemove', (e) => {
+                const rect = this.progressContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                const duration = MusicPlayer.getState().duration;
+                if (duration > 0) {
+                    const time = percent * duration;
+                    this.progressTooltip.textContent = formatTime(time);
+                    this.progressTooltip.style.left = x + 'px';
+                    this.progressTooltip.style.display = 'block';
+                }
+            });
+
+            this.progressContainer.addEventListener('mouseleave', () => {
+                this.progressTooltip.style.display = 'none';
+            });
+
+            this.progressContainer.addEventListener('click', (e) => {
+                const rect = this.progressContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                const duration = MusicPlayer.getState().duration;
+                if (duration > 0) {
+                    const time = percent * duration;
+                    MusicPlayer.seekTo(time);
+                }
+            });
         }
 
         show() {
@@ -282,14 +328,18 @@
                     this.toggleIcon.style.animationPlayState = 'paused';
                 }
 
-                // Mostrar el botón de música si el reproductor está oculto
+                // Actualizar barra de progreso
+                const progress = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
+                this.progressBar.style.width = progress + '%';
+
+                // Mostrar/ocultar botón flotante
                 if (!this.isVisible) {
                     this.toggleBtn.style.display = 'flex';
                 } else {
                     this.toggleBtn.style.display = 'none';
                 }
             } else {
-                // No hay canción, ocultar todo
+                // No hay canción
                 this.container.style.display = 'none';
                 this.toggleBtn.style.display = 'none';
             }
@@ -602,7 +652,6 @@
             this.actualizarPerfil();
             DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
             this.cargarPreview();
-            // NOTA: Ya no creamos MiniPlayer aquí
         }
 
         actualizarPerfil() {
@@ -642,7 +691,7 @@
     }
 
     // --------------------------------------------------------
-    // Galería Modal (usa el reproductor global)
+    // Galería Modal (usa el reproductor global) con barra de progreso interactiva
     // --------------------------------------------------------
     class GaleriaModal {
         constructor() {
@@ -680,8 +729,10 @@
                             <div class="disco-container">
                                 <img id="disco-imagen" class="disco-rotatorio" src="" alt="cover">
                             </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-neon" id="progress-bar"></div>
+                            <!-- Barra de progreso interactiva con tooltip -->
+                            <div class="progress-bar-container" id="progress-bar-container">
+                                <div class="progress-bar-neon" id="progress-bar" style="width: 0%;"></div>
+                                <div class="progress-tooltip" id="progress-tooltip" style="display: none;">0:00</div>
                             </div>
                             <div class="controles">
                                 <button class="control-btn" id="prev-btn">⏮ PREV</button>
@@ -756,6 +807,43 @@
             document.getElementById('play-pause-btn').addEventListener('click', () => MusicPlayer.togglePlayPause());
             document.getElementById('prev-btn').addEventListener('click', () => MusicPlayer.prev());
             document.getElementById('next-btn').addEventListener('click', () => MusicPlayer.next());
+
+            // Configurar la barra de progreso interactiva
+            this.setupProgressBar();
+        }
+
+        setupProgressBar() {
+            const container = this.modal.querySelector('#progress-bar-container');
+            const tooltip = this.modal.querySelector('#progress-tooltip');
+            const bar = this.modal.querySelector('#progress-bar');
+
+            container.addEventListener('mousemove', (e) => {
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                const duration = MusicPlayer.getState().duration;
+                if (duration > 0) {
+                    const time = percent * duration;
+                    tooltip.textContent = formatTime(time);
+                    tooltip.style.left = x + 'px';
+                    tooltip.style.display = 'block';
+                }
+            });
+
+            container.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+
+            container.addEventListener('click', (e) => {
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                const duration = MusicPlayer.getState().duration;
+                if (duration > 0) {
+                    const time = percent * duration;
+                    MusicPlayer.seekTo(time);
+                }
+            });
         }
 
         syncWithPlayer(state) {
@@ -908,7 +996,7 @@
 
         const menu = new MenuSidebar(currentObserver);
 
-        // Crear mini reproductor en lobby (si existen los elementos)
+        // Crear mini reproductor en lobby
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
             const miniPlayer = new MiniPlayerLobby();
         } else {
