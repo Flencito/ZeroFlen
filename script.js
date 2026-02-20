@@ -1,6 +1,5 @@
 /**
- * ZeroFlen v0.6 - Con Supabase (ranking global) + Reproductor persistente + Comunidad + Identidad con toggle de país
- * Versión con mensajes instantáneos y suscripción mejorada
+ * ZeroFlen v0.7 - Con Supabase (ranking global) + Reproductor persistente + Comunidad + Identidad + Temas
  */
 
 (function() {
@@ -50,7 +49,7 @@
         colorName: document.getElementById('color-name'),
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
-        showCountryToggle: document.getElementById('show-country-toggle'), // <-- NUEVO
+        showCountryToggle: document.getElementById('show-country-toggle'),
 
         // Ranking
         rankingList: document.getElementById('ranking-list'),
@@ -64,7 +63,8 @@
         menuColorDot: document.getElementById('profile-color-dot'),
         btnGaleria: document.getElementById('btn-galeria'),
         btnComunidad: document.getElementById('btn-comunidad'),
-        btnIdentidad: document.getElementById('btn-identidad'), // <-- NUEVO
+        btnIdentidad: document.getElementById('btn-identidad'),
+        btnTemas: document.getElementById('btn-temas'), // <-- NUEVO
         menuPreview: document.getElementById('menu-gallery-preview'),
         menuSidebar: document.querySelector('.menu-sidebar'),
 
@@ -452,7 +452,7 @@
     async function acceder() {
         const nombre = DOM.nameInput.value.trim();
         const color = colorSelector.selected.hex;
-        const showCountry = DOM.showCountryToggle ? DOM.showCountryToggle.checked : true; // <-- NUEVO: leer toggle
+        const showCountry = DOM.showCountryToggle ? DOM.showCountryToggle.checked : true;
         let country = '🏳️';
         try {
             const ipRes = await fetch('https://ipapi.co/json/');
@@ -478,7 +478,7 @@
                     color: color, 
                     country: country, 
                     accesses: 1,
-                    show_country: showCountry  // <-- NUEVO: enviar preferencia
+                    show_country: showCountry
                 }])
                 .select();
 
@@ -493,7 +493,7 @@
                 name: data[0].name,
                 color: data[0].color,
                 country: data[0].country,
-                show_country: data[0].show_country  // <-- NUEVO
+                show_country: data[0].show_country
             };
             localStorage.setItem('observer', JSON.stringify(observer));
             currentObserver = observer;
@@ -526,7 +526,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('observers')
-                    .select('name, color, country, accesses, show_country') // <-- NUEVO: incluir show_country
+                    .select('name, color, country, accesses, show_country')
                     .order('accesses', { ascending: false });
                 if (error) throw error;
                 this.observers = data.map((obs, index) => ({ rank: index + 1, ...obs }));
@@ -542,7 +542,6 @@
             this.observers.forEach(obs => {
                 const entry = document.createElement('div');
                 entry.className = 'ranking-entry';
-                // <-- NUEVO: mostrar país solo si show_country es true
                 const countryHtml = obs.show_country ? `<span class="country">${obs.country}</span>` : '';
                 entry.innerHTML = `
                     <div class="entry-left">
@@ -895,7 +894,6 @@
                 .on('postgres_changes', 
                     { event: 'INSERT', schema: 'public', table: 'messages' }, 
                     async (payload) => {
-                        // Obtenemos los datos completos del autor usando el autor_id del payload
                         const { data: autorData, error } = await supabaseClient
                             .from('observers')
                             .select('name, color, country')
@@ -909,7 +907,6 @@
                             this.agregarMensajeAlDOM(nuevoMensaje);
                             this.scrollAlFinal();
                         } else {
-                            // Si falla, recargamos todo (por si acaso)
                             this.cargarMensajes();
                         }
                     })
@@ -923,11 +920,10 @@
                 const { data, error } = await supabaseClient
                     .from('messages')
                     .insert([{ contenido, autor_id: currentObserver.id }])
-                    .select();  // Para obtener el mensaje insertado con su id y created_at
+                    .select();
 
                 if (error) throw error;
 
-                // Añadimos manualmente el mensaje con los datos del autor actual
                 const nuevoMensaje = {
                     ...data[0],
                     observers: {
@@ -956,7 +952,7 @@
     }
 
     // --------------------------------------------------------
-    // NUEVO: Modal Identidad (para cambiar show_country)
+    // Modal Identidad (para cambiar show_country)
     // --------------------------------------------------------
     class IdentidadModal {
         constructor() {
@@ -1024,7 +1020,7 @@
                 if (error) throw error;
                 currentObserver.show_country = nuevoValor;
                 localStorage.setItem('observer', JSON.stringify(currentObserver));
-                await rankingManager.cargar_ranking(); // Recargar ranking para reflejar el cambio
+                await rankingManager.cargar_ranking();
                 this.cerrar();
             } catch (error) {
                 console.error('Error al actualizar preferencia:', error);
@@ -1041,7 +1037,98 @@
     }
 
     // --------------------------------------------------------
-    // Menú Sidebar (con nuevo botón Identidad)
+    // NUEVO: Modal de selección de temas (Mutación Cromática)
+    // --------------------------------------------------------
+    class TemasModal {
+        constructor() {
+            this.modal = null;
+            this.temas = [
+                { id: 'default', nombre: 'Matrix Core', color: '#39FF14', preview: 'Verde neón' },
+                { id: 'synthwave', nombre: 'Synthwave', color: '#ff00ff', preview: 'Magenta' },
+                { id: 'deepsea', nombre: 'Deep Sea', color: '#00d4ff', preview: 'Cian profundo' },
+                { id: 'amber', nombre: 'Amber', color: '#ffb000', preview: 'Ámbar retro' },
+                { id: 'monochrome', nombre: 'Ghost', color: '#ffffff', preview: 'Blanco puro' }
+            ];
+            this.selectedTheme = document.body.getAttribute('data-theme') || 'default';
+        }
+
+        abrir() {
+            this.crearModal();
+            this.modal.classList.add('visible');
+        }
+
+        crearModal() {
+            const html = `
+                <div id="temas-modal" class="temas-modal">
+                    <div class="temas-overlay"></div>
+                    <div class="temas-container">
+                        <div class="temas-header">
+                            <h2>🎨 MUTACIÓN CROMÁTICA</h2>
+                            <button class="btn-close-temas">✕</button>
+                        </div>
+                        <div class="temas-content">
+                            <p class="temas-descripcion">Elige la frecuencia visual de ZeroFlen:</p>
+                            <div class="temas-grid" id="temas-grid">
+                                ${this.temas.map(t => `
+                                    <div class="tema-opcion ${t.id === this.selectedTheme ? 'selected' : ''}" data-tema="${t.id}">
+                                        <div class="tema-color" style="background: ${t.color}; box-shadow: 0 0 10px ${t.color};"></div>
+                                        <div class="tema-nombre">${t.nombre}</div>
+                                        <div class="tema-preview">${t.preview}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="temas-actions">
+                                <button class="btn-temas-guardar" id="btn-temas-guardar">GUARDAR</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            this.modal = document.getElementById('temas-modal');
+            this.agregarEventos();
+        }
+
+        agregarEventos() {
+            this.modal.querySelector('.btn-close-temas').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.temas-overlay').addEventListener('click', () => this.cerrar());
+
+            this.modal.querySelectorAll('.tema-opcion').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    this.modal.querySelectorAll('.tema-opcion').forEach(opt => opt.classList.remove('selected'));
+                    el.classList.add('selected');
+                    this.selectedTheme = el.dataset.tema;
+                });
+            });
+
+            this.modal.querySelector('.btn-temas-guardar').addEventListener('click', () => this.guardar());
+        }
+
+        guardar() {
+            aplicarTema(this.selectedTheme);
+            localStorage.setItem('zeroflen-theme', this.selectedTheme);
+            this.cerrar();
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+            setTimeout(() => {
+                this.modal.remove();
+            }, 300);
+        }
+    }
+
+    // Función para aplicar tema
+    function aplicarTema(themeId) {
+        if (themeId === 'default') {
+            document.body.removeAttribute('data-theme');
+        } else {
+            document.body.setAttribute('data-theme', themeId);
+        }
+    }
+
+    // --------------------------------------------------------
+    // Menú Sidebar (con todos los botones)
     // --------------------------------------------------------
     class MenuSidebar {
         constructor(observer) {
@@ -1049,7 +1136,8 @@
             this.actualizarPerfil();
             DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
             DOM.btnComunidad.addEventListener('click', () => this.abrirComunidad());
-            DOM.btnIdentidad.addEventListener('click', () => this.abrirIdentidad()); // <-- NUEVO
+            DOM.btnIdentidad.addEventListener('click', () => this.abrirIdentidad());
+            DOM.btnTemas.addEventListener('click', () => this.abrirTemas());
             this.cargarPreview();
         }
 
@@ -1093,9 +1181,14 @@
             comunidad.abrir();
         }
 
-        abrirIdentidad() {  // <-- NUEVO
+        abrirIdentidad() {
             const identidad = new IdentidadModal();
             identidad.abrir();
+        }
+
+        abrirTemas() {
+            const temas = new TemasModal();
+            temas.abrir();
         }
     }
 
@@ -1171,7 +1264,7 @@
             mostrar_status: () => {
                 const days = DOM.countdown.textContent;
                 const budget = DOM.budget.textContent;
-                alert(`ZeroFlen v0.6\nTiempo restante: ${days}\nSaldo: ${budget}`);
+                alert(`ZeroFlen v0.7\nTiempo restante: ${days}\nSaldo: ${budget}`);
             }
         };
 
@@ -1192,7 +1285,7 @@
                     console.log('Usuario antiguo sin id, obteniendo de Supabase...');
                     const { data, error } = await supabaseClient
                         .from('observers')
-                        .select('id, show_country') // <-- NUEVO: también obtenemos show_country
+                        .select('id, show_country')
                         .eq('name', currentObserver.name)
                         .maybeSingle();
                     
@@ -1200,13 +1293,11 @@
                         console.error('Error al obtener id del observador:', error);
                     } else if (data) {
                         currentObserver.id = data.id;
-                        currentObserver.show_country = data.show_country; // <-- NUEVO
-                        // Actualizamos localStorage con el id y show_country
+                        currentObserver.show_country = data.show_country;
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
                         console.log('id y show_country obtenidos y guardados');
                     } else {
                         console.warn('No se encontró el observador en la base de datos');
-                        // Si no se encuentra, forzamos un nuevo registro
                         localStorage.removeItem('observer');
                         currentObserver = null;
                         abrirGatekeeper();
@@ -1271,6 +1362,12 @@
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
+    }
+
+    // Cargar tema guardado
+    const savedTheme = localStorage.getItem('zeroflen-theme');
+    if (savedTheme) {
+        aplicarTema(savedTheme);
     }
 
     // Elemento oculto para YouTube

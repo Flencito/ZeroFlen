@@ -24,18 +24,20 @@
                     <input type="text" id="observer-name" class="input-name" placeholder="Ej: AlphaVortex42" maxlength="20" autocomplete="off">
                     <div id="name-status" class="name-status"></div>
                 </div>
-                div class="form-group toggle-group">
-                <label class="label">MOSTRAR PAÍS EN EL RANKING</label>
-                <div class="toggle-switch">
-                    <input type="checkbox" id="show-country-toggle" checked>
-                    <label for="show-country-toggle" class="toggle-label"></label>
-                </div>
-                <p class="toggle-description">Si activas esta opción, otros observadores verán tu bandera.</p>
                 <!-- Color -->
                 <div class="form-group">
                     <label class="label">FIRMA CROMÁTICA</label>
                     <div class="color-palette" id="color-palette"></div>
                     <p id="color-name" class="color-name">Selecciona un color</p>
+                </div>
+                <!-- Toggle de país (corregido) -->
+                <div class="form-group toggle-group">
+                    <label class="label">MOSTRAR PAÍS EN EL RANKING</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="show-country-toggle" checked>
+                        <label for="show-country-toggle" class="toggle-label"></label>
+                    </div>
+                    <p class="toggle-description">Si activas esta opción, otros observadores verán tu bandera.</p>
                 </div>
                 <!-- Preview -->
                 <div class="preview-section">
@@ -162,10 +164,9 @@
                 </div>
             </div>
             <button class="btn-galeria" id="btn-galeria">🎵 MUTACIÓN MÚSICA</button>
-            <!-- NUEVO BOTÓN COMUNIDAD -->
             <button class="btn-comunidad" id="btn-comunidad">📡 COMUNIDAD</button>
-                <!-- Nuevo botón Identidad del Observador -->
             <button class="btn-identidad" id="btn-identidad">👤 IDENTIDAD DEL OBSERVADOR</button>
+            <button class="btn-temas" id="btn-temas">🎨 MUTACIÓN CROMÁTICA</button>
         </aside>
     </div>
 
@@ -178,7 +179,7 @@
         <img id="music-toggle-icon" src="" alt="music">
     </button>
 
-    <!-- ============ MODAL COMUNIDAD (nuevo) ============ -->
+    <!-- ============ MODAL COMUNIDAD ============ -->
     <div id="comunidad-modal" class="comunidad-modal">
         <div class="comunidad-overlay"></div>
         <div class="comunidad-container">
@@ -195,6 +196,26 @@
             </div>
             <div class="comunidad-footer">
                 <button class="btn-volver-comunidad">◄ VOLVER AL LOBBY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL DE SELECCIÓN DE TEMAS ============ -->
+    <div id="temas-modal" class="temas-modal">
+        <div class="temas-overlay"></div>
+        <div class="temas-container">
+            <div class="temas-header">
+                <h2>🎨 MUTACIÓN CROMÁTICA</h2>
+                <button class="btn-close-temas">✕</button>
+            </div>
+            <div class="temas-content">
+                <p class="temas-descripcion">Elige la frecuencia visual de ZeroFlen:</p>
+                <div class="temas-grid" id="temas-grid">
+                    <!-- Las opciones se generarán con JS -->
+                </div>
+                <div class="temas-actions">
+                    <button class="btn-temas-guardar" id="btn-temas-guardar">GUARDAR</button>
+                </div>
             </div>
         </div>
     </div>
