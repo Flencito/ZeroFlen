@@ -1407,6 +1407,21 @@
                         currentObserver.id = data.id;
                         currentObserver.show_country = data.show_country;
                         currentObserver.access_key = data.access_key;
+                        // Si no tiene access_key, generamos una nueva
+                        if (!currentObserver.access_key) {
+                            console.log('Generando nueva access_key para usuario existente...');
+                            const newKey = await generarAccessKeyUnico();
+                            // Actualizar en Supabase
+                            const { error: updateError } = await supabaseClient
+                                .from('observers')
+                                .update({ access_key: newKey })
+                                .eq('id', currentObserver.id);
+                            if (!updateError) {
+                                currentObserver.access_key = newKey;
+                            } else {
+                                console.error('Error al guardar access_key:', updateError);
+                            }
+                        }
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
                         console.log('id, show_country y access_key obtenidos y guardados');
                     } else {
@@ -1415,8 +1430,8 @@
                         currentObserver = null;
                         abrirGatekeeper();
                     }
-                } else if (currentObserver.show_country === undefined || currentObserver.access_key === undefined) {
-                    // Usuario con id pero sin show_country o access_key (versión antigua)
+                } else if (currentObserver.show_country === undefined || !currentObserver.access_key) {
+                    // Usuario con id pero sin show_country o sin access_key (versión antigua)
                     const { data, error } = await supabaseClient
                         .from('observers')
                         .select('show_country, access_key')
@@ -1425,36 +1440,34 @@
                     if (!error && data) {
                         currentObserver.show_country = data.show_country;
                         currentObserver.access_key = data.access_key;
+                        // Si no tiene access_key, generamos una nueva
+                        if (!currentObserver.access_key) {
+                            console.log('Generando nueva access_key para usuario existente...');
+                            const newKey = await generarAccessKeyUnico();
+                            const { error: updateError } = await supabaseClient
+                                .from('observers')
+                                .update({ access_key: newKey })
+                                .eq('id', currentObserver.id);
+                            if (!updateError) {
+                                currentObserver.access_key = newKey;
+                            }
+                        }
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
                     }
                 }
 
-                if (currentObserver) {
-                    DOM.gatekeeperModal.classList.remove('active');
-                    await rankingManager.cargar_ranking();
-                    rankingManager.start_auto_update();
-                    await rankingManager.registrar_acceso();
-                }
-            } catch (e) {
-                console.warn('Error al parsear localStorage, limpiando...', e);
-                localStorage.removeItem('observer');
-                abrirGatekeeper();
-            }
-        } else {
-            abrirGatekeeper();
-            nameValidator = new NameValidator();
-            colorSelector = new ColorSelector();
-            DOM.nameInput.addEventListener('input', async (e) => {
-                const nombre = e.target.value.trim();
-                DOM.previewName.textContent = nombre || 'Ingresa tu nombre';
-                const resultado = await nameValidator.validar_con_debounce(nombre);
-                DOM.nameStatus.textContent = resultado.msg;
-                DOM.nameStatus.className = 'name-status ' + (resultado.valid ? 'valid' : 'invalid');
-                validar_completitud();
-            });
-            DOM.btnEnter.addEventListener('click', acceder);
+        if (currentObserver) {
+            DOM.gatekeeperModal.classList.remove('active');
+            await rankingManager.cargar_ranking();
+            rankingManager.start_auto_update();
+            await rankingManager.registrar_acceso();
         }
-
+    } catch (e) {
+        console.warn('Error al parsear localStorage, limpiando...', e);
+        localStorage.removeItem('observer');
+        abrirGatekeeper();
+    }
+}
         const menu = new MenuSidebar(currentObserver);
 
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
