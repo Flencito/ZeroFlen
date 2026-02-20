@@ -1518,9 +1518,17 @@ body {
         width: 100%;
     }
 
+    /* Ajustes para el modal de registro en móvil */
     .gatekeeper-container {
+        max-height: 85vh;
+        overflow-y: auto;
         padding: 25px 20px;
     }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
     .gatekeeper-title {
         font-size: 1.5rem;
     }
