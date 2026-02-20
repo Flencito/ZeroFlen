@@ -33,6 +33,12 @@
                         <input type="text" id="observer-name" class="input-name" placeholder="Ej: AlphaVortex42" maxlength="20" autocomplete="off">
                         <div id="name-status" class="name-status"></div>
                     </div>
+
+                    <!-- Switch a login justo debajo del nombre -->
+                    <div class="gatekeeper-switch">
+                        <button id="btn-show-login" class="switch-btn">¿Ya tienes una clave? Inicia sesión</button>
+                    </div>
+
                     <div class="form-group">
                         <label class="label">FIRMA CROMÁTICA</label>
                         <div class="color-palette" id="color-palette"></div>
@@ -51,11 +57,6 @@
                         <p id="preview-name" class="preview-name breathe">Ingresa tu nombre</p>
                     </div>
                     <button id="btn-enter" class="btn-enter" disabled>🚀 ACCEDER AL LOBBY</button>
-                </div>
-
-                <!-- Switch a login -->
-                <div class="gatekeeper-switch">
-                    <button id="btn-show-login" class="switch-btn">¿Ya tienes una clave? Inicia sesión</button>
                 </div>
 
                 <!-- Formulario de login (oculto inicialmente) -->
