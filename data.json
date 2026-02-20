@@ -1,5 +1,5 @@
 {
-  "version": "0.6-nucleus",
+  "version": "0.7-nucleus",
   "days_elapsed": 4,
   "financials": {
     "initial": 20.0,
@@ -37,7 +37,12 @@
       "timestamp": "2026-02-19 11:10",
       "id": "006",
       "msg": "Privacidad: toggle de país en ranking implementado"
+    },
+    {
+      "timestamp": "2026-02-19 15:30",
+      "id": "007",
+      "msg": "Mutación Cromática: selector de temas visuales"
     }
   ],
-  "evolution_state": "Núcleo estable v0.6 - Gatekeeper, Música, Comunidad y Privacidad activos"
+  "evolution_state": "Núcleo estable v0.7 - Temas dinámicos y personalización"
 }
