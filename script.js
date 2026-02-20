@@ -430,7 +430,8 @@
                 { hex: '#FFFF00', name: 'Amarillo' },
                 { hex: '#FF6600', name: 'Naranja' },
                 { hex: '#FFFFFF', name: 'Blanco' },
-                { hex: '#0099FF', name: 'Azul' }
+                { hex: '#0099FF', name: 'Azul' },
+                { hex: '#ff0000', name: 'Rojo' }
             ];
             this.selected = null;
             this.renderPalette();
