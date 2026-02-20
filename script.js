@@ -1,5 +1,6 @@
 /**
  * ZeroFlen v0.8 - Con Supabase + Reproductor + Comunidad + Identidad + Temas + Identity Key
+ * Con verificación de existencia del usuario al inicio
  */
 
 (function() {
@@ -77,7 +78,6 @@
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
         showCountryToggle: document.getElementById('show-country-toggle'),
-        // Nuevos elementos para login
         registerForm: document.getElementById('register-form'),
         loginForm: document.getElementById('login-form'),
         btnShowLogin: document.getElementById('btn-show-login'),
@@ -430,8 +430,7 @@
                 { hex: '#FFFF00', name: 'Amarillo' },
                 { hex: '#FF6600', name: 'Naranja' },
                 { hex: '#FFFFFF', name: 'Blanco' },
-                { hex: '#0099FF', name: 'Azul' },
-                { hex: '#ff0000', name: 'Rojo' }
+                { hex: '#0099FF', name: 'Azul' }
             ];
             this.selected = null;
             this.renderPalette();
@@ -1454,6 +1453,28 @@
                             }
                         }
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
+                    }
+                }
+
+                // --- VERIFICACIÓN DE EXISTENCIA DEL USUARIO EN LA BASE DE DATOS ---
+                if (currentObserver) {
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('observers')
+                            .select('id')
+                            .eq('id', currentObserver.id)
+                            .maybeSingle();
+
+                        if (error || !data) {
+                            console.warn('Usuario no encontrado en la base de datos, limpiando localStorage...');
+                            localStorage.removeItem('observer');
+                            currentObserver = null;
+                            abrirGatekeeper();
+                            return; // Salir de la inicialización
+                        }
+                    } catch (e) {
+                        console.error('Error al verificar existencia del usuario:', e);
+                        // Si hay error de red, asumimos que existe para no bloquear
                     }
                 }
 
