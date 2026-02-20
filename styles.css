@@ -2280,7 +2280,7 @@ input:checked + .toggle-label:before {
 /* ============ GATEKEEPER SWITCH ============ */
 .gatekeeper-switch {
     margin-top: 15px;
-    padding-bottom: 25px
+    margin-bottom: 15px;
     text-align: center;
 }
 .switch-btn {
@@ -2334,5 +2334,16 @@ input:checked + .toggle-label:before {
 .btn-copiar:hover {
     background: var(--accent-color);
     color: var(--bg-darker);
+}
 
+/* Espaciado entre el enlace de login y el siguiente campo */
+#register-form .gatekeeper-switch + .form-group {
+    margin-top: 25px;
+}
+
+/* Ajuste para móvil */
+@media (max-width: 768px) {
+    #register-form .gatekeeper-switch + .form-group {
+        margin-top: 15px;
+    }
 }
