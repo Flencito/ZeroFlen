@@ -2276,3 +2276,61 @@ input:checked + .toggle-label:before {
     color: var(--bg-darker);
     box-shadow: 0 0 20px var(--shadow-color);
 }
+
+/* ============ GATEKEEPER SWITCH ============ */
+.gatekeeper-switch {
+    margin-top: 15px;
+    text-align: center;
+}
+.switch-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.switch-btn:hover {
+    opacity: 0.8;
+}
+
+/* ============ IDENTIDAD CLAVE ============ */
+.identidad-clave {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(var(--accent-color-rgb), 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 10px;
+}
+.clave-label {
+    font-family: var(--font-mono);
+    color: var(--muted-color);
+    font-size: 0.8rem;
+}
+.clave-valor {
+    font-family: var(--font-mono);
+    color: var(--accent-color);
+    font-weight: 700;
+    letter-spacing: 1px;
+    flex: 1;
+}
+.btn-copiar {
+    background: rgba(var(--accent-color-rgb), 0.1);
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+.btn-copiar:hover {
+    background: var(--accent-color);
+    color: var(--bg-darker);
+}

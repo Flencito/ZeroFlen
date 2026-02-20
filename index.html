@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ZeroFlen Lobby v0.2 - Terminal de Observación">
+    <meta name="description" content="ZeroFlen: Ranking global, música IA y comunidad en tiempo real. Únete al Imperio Digital.">
+    <meta name="keywords" content="ZeroFlen, Ranking, Música IA, Comunidad, Observadores, Supabase">
+    <meta name="author" content="ZeroFlen">
+    <meta property="og:title" content="ZeroFlen - El Imperio Digital">
+    <meta property="og:description" content="Ranking global, música IA y comunidad en tiempo real. Únete al Imperio Digital.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://zeroflen.com">
+    <meta property="og:image" content="https://zeroflen.com/icono-zeroflen.png">
+    <meta name="twitter:card" content="summary_large_image">
     <title>ZeroFlen</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/png" href="icono-zeroflen.png">
@@ -18,34 +26,49 @@
                 <p class="gatekeeper-subtitle">Elige tu identidad observadora</p>
             </div>
             <div class="gatekeeper-form">
-                <!-- Nombre -->
-                <div class="form-group">
-                    <label for="observer-name" class="label">NOMBRE DE OBSERVADOR</label>
-                    <input type="text" id="observer-name" class="input-name" placeholder="Ej: AlphaVortex42" maxlength="20" autocomplete="off">
-                    <div id="name-status" class="name-status"></div>
-                </div>
-                <!-- Color -->
-                <div class="form-group">
-                    <label class="label">FIRMA CROMÁTICA</label>
-                    <div class="color-palette" id="color-palette"></div>
-                    <p id="color-name" class="color-name">Selecciona un color</p>
-                </div>
-                <!-- Toggle de país (corregido) -->
-                <div class="form-group toggle-group">
-                    <label class="label">MOSTRAR PAÍS EN EL RANKING</label>
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="show-country-toggle" checked>
-                        <label for="show-country-toggle" class="toggle-label"></label>
+                <!-- Formulario de registro (visible por defecto) -->
+                <div id="register-form">
+                    <div class="form-group">
+                        <label for="observer-name" class="label">NOMBRE DE OBSERVADOR</label>
+                        <input type="text" id="observer-name" class="input-name" placeholder="Ej: AlphaVortex42" maxlength="20" autocomplete="off">
+                        <div id="name-status" class="name-status"></div>
                     </div>
-                    <p class="toggle-description">Si activas esta opción, otros observadores verán tu bandera.</p>
+                    <div class="form-group">
+                        <label class="label">FIRMA CROMÁTICA</label>
+                        <div class="color-palette" id="color-palette"></div>
+                        <p id="color-name" class="color-name">Selecciona un color</p>
+                    </div>
+                    <div class="form-group toggle-group">
+                        <label class="label">MOSTRAR PAÍS EN EL RANKING</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="show-country-toggle" checked>
+                            <label for="show-country-toggle" class="toggle-label"></label>
+                        </div>
+                        <p class="toggle-description">Si activas esta opción, otros observadores verán tu bandera.</p>
+                    </div>
+                    <div class="preview-section">
+                        <p class="preview-label">VISTA PREVIA (Neon Breath):</p>
+                        <p id="preview-name" class="preview-name breathe">Ingresa tu nombre</p>
+                    </div>
+                    <button id="btn-enter" class="btn-enter" disabled>🚀 ACCEDER AL LOBBY</button>
                 </div>
-                <!-- Preview -->
-                <div class="preview-section">
-                    <p class="preview-label">VISTA PREVIA (Neon Breath):</p>
-                    <p id="preview-name" class="preview-name breathe">Ingresa tu nombre</p>
+
+                <!-- Switch a login -->
+                <div class="gatekeeper-switch">
+                    <button id="btn-show-login" class="switch-btn">¿Ya tienes una clave? Inicia sesión</button>
                 </div>
-                <!-- Botón -->
-                <button id="btn-enter" class="btn-enter" disabled>🚀 ACCEDER AL LOBBY</button>
+
+                <!-- Formulario de login (oculto inicialmente) -->
+                <div id="login-form" style="display: none;">
+                    <div class="form-group">
+                        <label class="label">LLAVE DE ACCESO</label>
+                        <input type="text" id="access-key-input" class="input-name" placeholder="Ej: NEON42" maxlength="20" autocomplete="off">
+                    </div>
+                    <button id="btn-login" class="btn-enter">🔑 ACCEDER</button>
+                    <div class="gatekeeper-switch">
+                        <button id="btn-show-register" class="switch-btn">¿Nuevo? Regístrate</button>
+                    </div>
+                </div>
             </div>
             <div class="gatekeeper-footer">
                 <p class="footer-text">Tu identidad es única y permanente. Elige sabiamente.</p>
@@ -75,10 +98,10 @@
                 <div class="header">
                     <div>
                         <div class="header-title">⚡ ZEROFLEN</div>
-                        <div class="header-subtitle">Lobby v0.2</div>
+                        <div class="header-subtitle">Lobby v0.8</div>
                     </div>
                     <div class="badges">
-                        <div class="badge" id="version-badge">0.2-nucleus</div>
+                        <div class="badge" id="version-badge">0.8-nucleus</div>
                         <div class="badge" id="timestamp-badge">--:--:--</div>
                     </div>
                 </div>

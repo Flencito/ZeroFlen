@@ -1,5 +1,5 @@
 /**
- * ZeroFlen v0.7 - Con Supabase (ranking global) + Reproductor persistente + Comunidad + Identidad + Temas
+ * ZeroFlen v0.8 - Con Supabase + Reproductor + Comunidad + Identidad + Temas + Identity Key
  */
 
 (function() {
@@ -28,6 +28,33 @@
     };
 
     // --------------------------------------------------------
+    // Lista de palabras para la llave de acceso
+    // --------------------------------------------------------
+    const TECH_WORDS = ['NEON', 'CORE', 'GHOST', 'VOID', 'ATOM', 'BYTE', 'CYBER', 'DIGITAL', 'ECHO', 'FLUX', 'GRID', 'HACK', 'ION', 'JAVA', 'KERNEL', 'LOOP', 'MATRIX', 'NODE', 'OCTAL', 'PIXEL', 'QUANTUM', 'RADIO', 'SIGNAL', 'TERMINAL', 'ULTRA', 'VECTOR', 'WAVE', 'XENON', 'YOTT', 'ZERO'];
+
+    function generarAccessKey() {
+        const word = TECH_WORDS[Math.floor(Math.random() * TECH_WORDS.length)];
+        const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+        return `${word}${number}`;
+    }
+
+    async function generarAccessKeyUnico() {
+        let attempts = 0;
+        while (attempts < 10) {
+            const key = generarAccessKey();
+            const { data, error } = await supabaseClient
+                .from('observers')
+                .select('id')
+                .eq('access_key', key)
+                .maybeSingle();
+            if (!error && !data) return key;
+            attempts++;
+        }
+        // Fallback: usar timestamp
+        return `ZERO${Date.now().toString().slice(-4)}`;
+    }
+
+    // --------------------------------------------------------
     // Utilidades DOM
     // --------------------------------------------------------
     const DOM = {
@@ -50,6 +77,13 @@
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
         showCountryToggle: document.getElementById('show-country-toggle'),
+        // Nuevos elementos para login
+        registerForm: document.getElementById('register-form'),
+        loginForm: document.getElementById('login-form'),
+        btnShowLogin: document.getElementById('btn-show-login'),
+        btnShowRegister: document.getElementById('btn-show-register'),
+        btnLogin: document.getElementById('btn-login'),
+        accessKeyInput: document.getElementById('access-key-input'),
 
         // Ranking
         rankingList: document.getElementById('ranking-list'),
@@ -64,7 +98,7 @@
         btnGaleria: document.getElementById('btn-galeria'),
         btnComunidad: document.getElementById('btn-comunidad'),
         btnIdentidad: document.getElementById('btn-identidad'),
-        btnTemas: document.getElementById('btn-temas'), // <-- NUEVO
+        btnTemas: document.getElementById('btn-temas'),
         menuPreview: document.getElementById('menu-gallery-preview'),
         menuSidebar: document.querySelector('.menu-sidebar'),
 
@@ -90,7 +124,7 @@
     // --------------------------------------------------------
     // Estado global
     // --------------------------------------------------------
-    let currentObserver = null; // { id, name, color, country, show_country }
+    let currentObserver = null; // { id, name, color, country, show_country, access_key }
     let rankingManager = null;
     let nameValidator = null;
     let colorSelector = null;
@@ -470,6 +504,9 @@
         DOM.btnEnter.classList.add('loading');
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
+        // Generar clave única
+        const accessKey = await generarAccessKeyUnico();
+
         try {
             const { data, error } = await supabaseClient
                 .from('observers')
@@ -478,7 +515,8 @@
                     color: color, 
                     country: country, 
                     accesses: 1,
-                    show_country: showCountry
+                    show_country: showCountry,
+                    access_key: accessKey
                 }])
                 .select();
 
@@ -493,7 +531,8 @@
                 name: data[0].name,
                 color: data[0].color,
                 country: data[0].country,
-                show_country: data[0].show_country
+                show_country: data[0].show_country,
+                access_key: data[0].access_key
             };
             localStorage.setItem('observer', JSON.stringify(observer));
             currentObserver = observer;
@@ -510,11 +549,43 @@
         }
     }
 
+    async function loginConClave() {
+        const clave = DOM.accessKeyInput.value.trim().toUpperCase();
+        if (!clave) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('observers')
+                .select('*')
+                .eq('access_key', clave)
+                .maybeSingle();
+            if (error) throw error;
+            if (!data) {
+                alert('Clave no válida');
+                return;
+            }
+            const observer = {
+                id: data.id,
+                name: data.name,
+                color: data.color,
+                country: data.country,
+                show_country: data.show_country,
+                access_key: data.access_key
+            };
+            localStorage.setItem('observer', JSON.stringify(observer));
+            currentObserver = observer;
+            cerrarGatekeeper();
+            // Recargar para aplicar la nueva identidad
+            location.reload();
+        } catch (e) {
+            alert('Error al iniciar sesión');
+        }
+    }
+
     function cerrarGatekeeper() { DOM.gatekeeperModal.classList.remove('active'); }
     function abrirGatekeeper() { DOM.gatekeeperModal.classList.add('active'); }
 
     // --------------------------------------------------------
-    // RankingManager (con Supabase) - AHORA INCLUYE show_country
+    // RankingManager (con Supabase)
     // --------------------------------------------------------
     class RankingManager {
         constructor() {
@@ -781,7 +852,7 @@
     }
 
     // --------------------------------------------------------
-    // Modal Comunidad (en tiempo real) con mensajes instantáneos
+    // Modal Comunidad (en tiempo real)
     // --------------------------------------------------------
     class ComunidadModal {
         constructor() {
@@ -952,7 +1023,7 @@
     }
 
     // --------------------------------------------------------
-    // Modal Identidad (para cambiar show_country)
+    // Modal Identidad (con clave)
     // --------------------------------------------------------
     class IdentidadModal {
         constructor() {
@@ -987,6 +1058,11 @@
                                     <label for="identidad-show-country" class="toggle-label"></label>
                                 </div>
                             </div>
+                            <div class="identidad-clave">
+                                <span class="clave-label">Llave de acceso:</span>
+                                <span class="clave-valor" id="clave-valor">${currentObserver.access_key}</span>
+                                <button class="btn-copiar" id="btn-copiar-clave">📋</button>
+                            </div>
                             <div class="identidad-actions">
                                 <button class="btn-identidad-guardar">GUARDAR</button>
                             </div>
@@ -1004,6 +1080,15 @@
             this.modal.querySelector('.btn-close-identidad').addEventListener('click', () => this.cerrar());
             this.modal.querySelector('.identidad-overlay').addEventListener('click', () => this.cerrar());
             this.modal.querySelector('.btn-identidad-guardar').addEventListener('click', () => this.guardar());
+            const btnCopiar = this.modal.querySelector('#btn-copiar-clave');
+            if (btnCopiar) {
+                btnCopiar.addEventListener('click', () => {
+                    const clave = document.getElementById('clave-valor').textContent;
+                    navigator.clipboard.writeText(clave).then(() => {
+                        alert('Clave copiada al portapapeles');
+                    });
+                });
+            }
         }
 
         async guardar() {
@@ -1037,11 +1122,8 @@
     }
 
     // --------------------------------------------------------
-    // NUEVO: Modal de selección de temas (Mutación Cromática)
+    // Modal de selección de temas (Mutación Cromática)
     // --------------------------------------------------------
-    // --------------------------------------------------------
-// Modal de selección de temas (Mutación Cromática) - CORREGIDO
-// --------------------------------------------------------
     class TemasModal {
         constructor() {
             this.modal = null;
@@ -1056,12 +1138,10 @@
         }
 
         abrir() {
-            // Eliminar modal anterior si existe
             const oldModal = document.getElementById('temas-modal');
             if (oldModal) oldModal.remove();
 
             this.crearModal();
-            // Forzar un pequeño retraso para asegurar que el DOM está listo
             setTimeout(() => {
                 this.modal.classList.add('visible');
             }, 10);
@@ -1138,7 +1218,7 @@
     }
 
     // --------------------------------------------------------
-    // Menú Sidebar (con todos los botones)
+    // Menú Sidebar
     // --------------------------------------------------------
     class MenuSidebar {
         constructor(observer) {
@@ -1274,7 +1354,7 @@
             mostrar_status: () => {
                 const days = DOM.countdown.textContent;
                 const budget = DOM.budget.textContent;
-                alert(`ZeroFlen v0.7\nTiempo restante: ${days}\nSaldo: ${budget}`);
+                alert(`ZeroFlen v0.8\nTiempo restante: ${days}\nSaldo: ${budget}`);
             }
         };
 
@@ -1284,6 +1364,28 @@
 
         await loadLobbyData();
         rankingManager = new RankingManager();
+
+        // Configurar eventos del Gatekeeper (switch entre login/registro)
+        if (DOM.btnShowLogin) {
+            DOM.btnShowLogin.addEventListener('click', () => {
+                DOM.registerForm.style.display = 'none';
+                DOM.loginForm.style.display = 'block';
+            });
+        }
+        if (DOM.btnShowRegister) {
+            DOM.btnShowRegister.addEventListener('click', () => {
+                DOM.loginForm.style.display = 'none';
+                DOM.registerForm.style.display = 'block';
+            });
+        }
+        if (DOM.btnLogin) {
+            DOM.btnLogin.addEventListener('click', loginConClave);
+        }
+        if (DOM.accessKeyInput) {
+            DOM.accessKeyInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') loginConClave();
+            });
+        }
 
         const stored = localStorage.getItem('observer');
         if (stored) {
@@ -1295,7 +1397,7 @@
                     console.log('Usuario antiguo sin id, obteniendo de Supabase...');
                     const { data, error } = await supabaseClient
                         .from('observers')
-                        .select('id, show_country')
+                        .select('id, show_country, access_key')
                         .eq('name', currentObserver.name)
                         .maybeSingle();
                     
@@ -1304,23 +1406,25 @@
                     } else if (data) {
                         currentObserver.id = data.id;
                         currentObserver.show_country = data.show_country;
+                        currentObserver.access_key = data.access_key;
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
-                        console.log('id y show_country obtenidos y guardados');
+                        console.log('id, show_country y access_key obtenidos y guardados');
                     } else {
                         console.warn('No se encontró el observador en la base de datos');
                         localStorage.removeItem('observer');
                         currentObserver = null;
                         abrirGatekeeper();
                     }
-                } else if (currentObserver.show_country === undefined) {
-                    // Usuario con id pero sin show_country (versión antigua)
+                } else if (currentObserver.show_country === undefined || currentObserver.access_key === undefined) {
+                    // Usuario con id pero sin show_country o access_key (versión antigua)
                     const { data, error } = await supabaseClient
                         .from('observers')
-                        .select('show_country')
+                        .select('show_country, access_key')
                         .eq('id', currentObserver.id)
                         .maybeSingle();
                     if (!error && data) {
                         currentObserver.show_country = data.show_country;
+                        currentObserver.access_key = data.access_key;
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
                     }
                 }
