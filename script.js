@@ -1,6 +1,6 @@
 /**
  * ZeroFlen v0.8 - Con Supabase + Reproductor + Comunidad + Identidad + Temas + Identity Key
- * Con verificación de existencia del usuario al inicio
+ * Con verificación de existencia del usuario al inicio y selector de color robusto
  */
 
 (function() {
@@ -73,7 +73,6 @@
         gatekeeperModal: document.getElementById('gatekeeper-modal'),
         nameInput: document.getElementById('observer-name'),
         nameStatus: document.getElementById('name-status'),
-        colorPalette: document.getElementById('color-palette'),
         colorName: document.getElementById('color-name'),
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
@@ -419,7 +418,7 @@
     }
 
     // --------------------------------------------------------
-    // ColorSelector
+    // ColorSelector (con obtención directa del contenedor)
     // --------------------------------------------------------
     class ColorSelector {
         constructor() {
@@ -430,14 +429,20 @@
                 { hex: '#FFFF00', name: 'Amarillo' },
                 { hex: '#FF6600', name: 'Naranja' },
                 { hex: '#FFFFFF', name: 'Blanco' },
-                { hex: '#0099FF', name: 'Azul' }
+                { hex: '#0099FF', name: 'Azul' },
+                { hex: '#ff0000', name: 'Azul' }
             ];
             this.selected = null;
+            this.container = document.getElementById('color-palette');
+            if (!this.container) {
+                console.error('Error: No se encontró el elemento #color-palette');
+                return;
+            }
             this.renderPalette();
         }
 
         renderPalette() {
-            DOM.colorPalette.innerHTML = '';
+            this.container.innerHTML = '';
             this.colors.forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = 'color-btn';
@@ -448,7 +453,7 @@
                     <span class="color-label">${c.name}</span>
                 `;
                 btn.addEventListener('click', () => this.seleccionar_color(c.hex, c.name));
-                DOM.colorPalette.appendChild(btn);
+                this.container.appendChild(btn);
             });
         }
 
