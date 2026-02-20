@@ -2347,3 +2347,15 @@ input:checked + .toggle-label:before {
         margin-top: 15px;
     }
 }
+
+/* Espaciado entre el enlace de login y el siguiente campo */
+#register-form .gatekeeper-switch + .form-group {
+    margin-top: 30px; /* Ajusta este valor a tu gusto */
+}
+
+/* Ajuste para móvil */
+@media (max-width: 768px) {
+    #register-form .gatekeeper-switch + .form-group {
+        margin-top: 20px;
+    }
+}
