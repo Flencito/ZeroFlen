@@ -2280,7 +2280,7 @@ input:checked + .toggle-label:before {
 /* ============ GATEKEEPER SWITCH ============ */
 .gatekeeper-switch {
     margin-top: 15px;
-    margin-bottom: 50px
+    padding-bottom: 25px
     text-align: center;
 }
 .switch-btn {
@@ -2336,5 +2336,3 @@ input:checked + .toggle-label:before {
     color: var(--bg-darker);
 
 }
-
-
