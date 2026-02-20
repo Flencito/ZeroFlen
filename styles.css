@@ -2336,5 +2336,6 @@ input:checked + .toggle-label:before {
 }
 
 .gatekeeper-switch {
-    height: 5px;
+    height: -5px;
+
 }
