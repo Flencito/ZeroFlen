@@ -1,5 +1,5 @@
 /**
- * ZeroFlen v0.5 - Con Supabase (ranking global) + Reproductor persistente + Comunidad en tiempo real
+ * ZeroFlen v0.6 - Con Supabase (ranking global) + Reproductor persistente + Comunidad + Identidad con toggle de país
  * Versión con mensajes instantáneos y suscripción mejorada
  */
 
@@ -50,6 +50,7 @@
         colorName: document.getElementById('color-name'),
         previewName: document.getElementById('preview-name'),
         btnEnter: document.getElementById('btn-enter'),
+        showCountryToggle: document.getElementById('show-country-toggle'), // <-- NUEVO
 
         // Ranking
         rankingList: document.getElementById('ranking-list'),
@@ -63,6 +64,7 @@
         menuColorDot: document.getElementById('profile-color-dot'),
         btnGaleria: document.getElementById('btn-galeria'),
         btnComunidad: document.getElementById('btn-comunidad'),
+        btnIdentidad: document.getElementById('btn-identidad'), // <-- NUEVO
         menuPreview: document.getElementById('menu-gallery-preview'),
         menuSidebar: document.querySelector('.menu-sidebar'),
 
@@ -88,7 +90,7 @@
     // --------------------------------------------------------
     // Estado global
     // --------------------------------------------------------
-    let currentObserver = null; // { id, name, color, country }
+    let currentObserver = null; // { id, name, color, country, show_country }
     let rankingManager = null;
     let nameValidator = null;
     let colorSelector = null;
@@ -450,6 +452,7 @@
     async function acceder() {
         const nombre = DOM.nameInput.value.trim();
         const color = colorSelector.selected.hex;
+        const showCountry = DOM.showCountryToggle ? DOM.showCountryToggle.checked : true; // <-- NUEVO: leer toggle
         let country = '🏳️';
         try {
             const ipRes = await fetch('https://ipapi.co/json/');
@@ -470,7 +473,13 @@
         try {
             const { data, error } = await supabaseClient
                 .from('observers')
-                .insert([{ name: nombre, color: color, country: country, accesses: 1 }])
+                .insert([{ 
+                    name: nombre, 
+                    color: color, 
+                    country: country, 
+                    accesses: 1,
+                    show_country: showCountry  // <-- NUEVO: enviar preferencia
+                }])
                 .select();
 
             if (error) {
@@ -483,7 +492,8 @@
                 id: data[0].id,
                 name: data[0].name,
                 color: data[0].color,
-                country: data[0].country
+                country: data[0].country,
+                show_country: data[0].show_country  // <-- NUEVO
             };
             localStorage.setItem('observer', JSON.stringify(observer));
             currentObserver = observer;
@@ -504,7 +514,7 @@
     function abrirGatekeeper() { DOM.gatekeeperModal.classList.add('active'); }
 
     // --------------------------------------------------------
-    // RankingManager (con Supabase)
+    // RankingManager (con Supabase) - AHORA INCLUYE show_country
     // --------------------------------------------------------
     class RankingManager {
         constructor() {
@@ -516,7 +526,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('observers')
-                    .select('name, color, country, accesses')
+                    .select('name, color, country, accesses, show_country') // <-- NUEVO: incluir show_country
                     .order('accesses', { ascending: false });
                 if (error) throw error;
                 this.observers = data.map((obs, index) => ({ rank: index + 1, ...obs }));
@@ -532,13 +542,15 @@
             this.observers.forEach(obs => {
                 const entry = document.createElement('div');
                 entry.className = 'ranking-entry';
+                // <-- NUEVO: mostrar país solo si show_country es true
+                const countryHtml = obs.show_country ? `<span class="country">${obs.country}</span>` : '';
                 entry.innerHTML = `
                     <div class="entry-left">
                         <span class="rank">${obs.rank}</span>
                         <span class="observer-name" style="color: ${obs.color};">${obs.name}</span>
                     </div>
                     <div class="entry-right">
-                        <span class="country">${obs.country}</span>
+                        ${countryHtml}
                         <span class="accesses">${obs.accesses.toLocaleString()}</span>
                     </div>
                 `;
@@ -554,7 +566,7 @@
                     <p class="current-label">TÚ ERES:</p>
                     <p class="current-name breathe" style="color: ${currentObserver.color};">${currentObserver.name}</p>
                     <div class="current-details">
-                        <span class="current-country">${currentObserver.country}</span>
+                        <span class="current-country">${currentObserver.show_country ? currentObserver.country : '🔒'}</span>
                         <p class="current-rank">Rango: #${obs.rank}</p>
                         <p class="current-accesses">Accesos: ${obs.accesses.toLocaleString()}</p>
                     </div>
@@ -944,7 +956,92 @@
     }
 
     // --------------------------------------------------------
-    // Menú Sidebar
+    // NUEVO: Modal Identidad (para cambiar show_country)
+    // --------------------------------------------------------
+    class IdentidadModal {
+        constructor() {
+            this.modal = null;
+            this.toggle = null;
+        }
+
+        abrir() {
+            this.crearModal();
+            this.modal.classList.add('visible');
+        }
+
+        crearModal() {
+            const html = `
+                <div id="identidad-modal" class="identidad-modal">
+                    <div class="identidad-overlay"></div>
+                    <div class="identidad-container">
+                        <div class="identidad-header">
+                            <h2>👤 IDENTIDAD DEL OBSERVADOR</h2>
+                            <button class="btn-close-identidad">✕</button>
+                        </div>
+                        <div class="identidad-content">
+                            <p class="identidad-info">
+                                <strong>Nombre:</strong> ${currentObserver.name}<br>
+                                <strong>Color:</strong> <span style="color: ${currentObserver.color};">${currentObserver.color}</span><br>
+                                <strong>País:</strong> ${currentObserver.country}
+                            </p>
+                            <div class="identidad-toggle">
+                                <span class="identidad-toggle-label">Mostrar país en el ranking</span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="identidad-show-country" ${currentObserver.show_country ? 'checked' : ''}>
+                                    <label for="identidad-show-country" class="toggle-label"></label>
+                                </div>
+                            </div>
+                            <div class="identidad-actions">
+                                <button class="btn-identidad-guardar">GUARDAR</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            this.modal = document.getElementById('identidad-modal');
+            this.toggle = document.getElementById('identidad-show-country');
+            this.agregarEventos();
+        }
+
+        agregarEventos() {
+            this.modal.querySelector('.btn-close-identidad').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.identidad-overlay').addEventListener('click', () => this.cerrar());
+            this.modal.querySelector('.btn-identidad-guardar').addEventListener('click', () => this.guardar());
+        }
+
+        async guardar() {
+            const nuevoValor = this.toggle.checked;
+            if (nuevoValor === currentObserver.show_country) {
+                this.cerrar();
+                return;
+            }
+            try {
+                const { error } = await supabaseClient
+                    .from('observers')
+                    .update({ show_country: nuevoValor })
+                    .eq('id', currentObserver.id);
+                if (error) throw error;
+                currentObserver.show_country = nuevoValor;
+                localStorage.setItem('observer', JSON.stringify(currentObserver));
+                await rankingManager.cargar_ranking(); // Recargar ranking para reflejar el cambio
+                this.cerrar();
+            } catch (error) {
+                console.error('Error al actualizar preferencia:', error);
+                alert('Error al guardar');
+            }
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+            setTimeout(() => {
+                this.modal.remove();
+            }, 500);
+        }
+    }
+
+    // --------------------------------------------------------
+    // Menú Sidebar (con nuevo botón Identidad)
     // --------------------------------------------------------
     class MenuSidebar {
         constructor(observer) {
@@ -952,6 +1049,7 @@
             this.actualizarPerfil();
             DOM.btnGaleria.addEventListener('click', () => this.abrirGaleria());
             DOM.btnComunidad.addEventListener('click', () => this.abrirComunidad());
+            DOM.btnIdentidad.addEventListener('click', () => this.abrirIdentidad()); // <-- NUEVO
             this.cargarPreview();
         }
 
@@ -993,6 +1091,11 @@
         abrirComunidad() {
             const comunidad = new ComunidadModal();
             comunidad.abrir();
+        }
+
+        abrirIdentidad() {  // <-- NUEVO
+            const identidad = new IdentidadModal();
+            identidad.abrir();
         }
     }
 
@@ -1068,7 +1171,7 @@
             mostrar_status: () => {
                 const days = DOM.countdown.textContent;
                 const budget = DOM.budget.textContent;
-                alert(`ZeroFlen v0.5\nTiempo restante: ${days}\nSaldo: ${budget}`);
+                alert(`ZeroFlen v0.6\nTiempo restante: ${days}\nSaldo: ${budget}`);
             }
         };
 
@@ -1089,7 +1192,7 @@
                     console.log('Usuario antiguo sin id, obteniendo de Supabase...');
                     const { data, error } = await supabaseClient
                         .from('observers')
-                        .select('id')
+                        .select('id, show_country') // <-- NUEVO: también obtenemos show_country
                         .eq('name', currentObserver.name)
                         .maybeSingle();
                     
@@ -1097,15 +1200,27 @@
                         console.error('Error al obtener id del observador:', error);
                     } else if (data) {
                         currentObserver.id = data.id;
-                        // Actualizamos localStorage con el id
+                        currentObserver.show_country = data.show_country; // <-- NUEVO
+                        // Actualizamos localStorage con el id y show_country
                         localStorage.setItem('observer', JSON.stringify(currentObserver));
-                        console.log('id obtenido y guardado:', currentObserver.id);
+                        console.log('id y show_country obtenidos y guardados');
                     } else {
                         console.warn('No se encontró el observador en la base de datos');
                         // Si no se encuentra, forzamos un nuevo registro
                         localStorage.removeItem('observer');
                         currentObserver = null;
                         abrirGatekeeper();
+                    }
+                } else if (currentObserver.show_country === undefined) {
+                    // Usuario con id pero sin show_country (versión antigua)
+                    const { data, error } = await supabaseClient
+                        .from('observers')
+                        .select('show_country')
+                        .eq('id', currentObserver.id)
+                        .maybeSingle();
+                    if (!error && data) {
+                        currentObserver.show_country = data.show_country;
+                        localStorage.setItem('observer', JSON.stringify(currentObserver));
                     }
                 }
 
