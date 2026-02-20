@@ -1039,6 +1039,9 @@
     // --------------------------------------------------------
     // NUEVO: Modal de selección de temas (Mutación Cromática)
     // --------------------------------------------------------
+    // --------------------------------------------------------
+// Modal de selección de temas (Mutación Cromática) - CORREGIDO
+// --------------------------------------------------------
     class TemasModal {
         constructor() {
             this.modal = null;
@@ -1053,8 +1056,15 @@
         }
 
         abrir() {
+            // Eliminar modal anterior si existe
+            const oldModal = document.getElementById('temas-modal');
+            if (oldModal) oldModal.remove();
+
             this.crearModal();
-            this.modal.classList.add('visible');
+            // Forzar un pequeño retraso para asegurar que el DOM está listo
+            setTimeout(() => {
+                this.modal.classList.add('visible');
+            }, 10);
         }
 
         crearModal() {
