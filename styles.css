@@ -2336,5 +2336,12 @@ input:checked + .toggle-label:before {
 
 }
 
+@media (max-width: 768px) {
+    .gatekeeper-switch {
+        margin-bottom: 10px;
+    }
+}
+
+
 
 
