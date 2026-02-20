@@ -1456,18 +1456,33 @@
                     }
                 }
 
-        if (currentObserver) {
-            DOM.gatekeeperModal.classList.remove('active');
-            await rankingManager.cargar_ranking();
-            rankingManager.start_auto_update();
-            await rankingManager.registrar_acceso();
+                // Si después de todo tenemos un observador válido, cerramos el Gatekeeper y cargamos el ranking
+                if (currentObserver) {
+                    DOM.gatekeeperModal.classList.remove('active');
+                    await rankingManager.cargar_ranking();
+                    rankingManager.start_auto_update();
+                    await rankingManager.registrar_acceso();
+                }
+            } catch (e) {
+                console.warn('Error al parsear localStorage, limpiando...', e);
+                localStorage.removeItem('observer');
+                abrirGatekeeper();
+            }
+        } else {
+            abrirGatekeeper();
+            nameValidator = new NameValidator();
+            colorSelector = new ColorSelector();
+            DOM.nameInput.addEventListener('input', async (e) => {
+                const nombre = e.target.value.trim();
+                DOM.previewName.textContent = nombre || 'Ingresa tu nombre';
+                const resultado = await nameValidator.validar_con_debounce(nombre);
+                DOM.nameStatus.textContent = resultado.msg;
+                DOM.nameStatus.className = 'name-status ' + (resultado.valid ? 'valid' : 'invalid');
+                validar_completitud();
+            });
+            DOM.btnEnter.addEventListener('click', acceder);
         }
-    } catch (e) {
-        console.warn('Error al parsear localStorage, limpiando...', e);
-        localStorage.removeItem('observer');
-        abrirGatekeeper();
-    }
-}
+
         const menu = new MenuSidebar(currentObserver);
 
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
