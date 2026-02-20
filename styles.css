@@ -2334,3 +2334,7 @@ input:checked + .toggle-label:before {
     background: var(--accent-color);
     color: var(--bg-darker);
 }
+
+.gatekeeper-switch {
+    height: 5px;
+}
