@@ -3,7 +3,6 @@
     const ADMIN_IDS = [1]; // ID del director
     if (!window.currentObserver || !ADMIN_IDS.includes(window.currentObserver.id)) return;
 
-    // Evitar múltiples paneles
     if (document.getElementById('admin-panel')) return;
 
     const adminPanel = document.createElement('div');
@@ -23,7 +22,6 @@
     `;
     document.body.appendChild(adminPanel);
 
-    // Estilos ya deberían estar en admin.css, pero añadimos por si acaso
     const style = document.createElement('style');
     style.textContent = `
         #admin-panel { position: fixed; top: 20px; right: 20px; width: 300px; background: var(--bg-darker); border: 2px solid var(--accent-color); border-radius: 8px; padding: 15px; z-index: 10000; font-family: var(--font-mono); box-shadow: 0 0 30px var(--shadow-color); }

@@ -1,6 +1,6 @@
 // auth.js
 (function() {
-    // Dependencias: window.db, window.DOM (se espera que existan cuando se use)
+    // Dependencias: window.db, window.DOM, window.cerrarGatekeeper, window.abrirGatekeeper
 
     const TECH_WORDS = ['NEON', 'CORE', 'GHOST', 'VOID', 'ATOM', 'BYTE', 'CYBER', 'DIGITAL', 'ECHO', 'FLUX', 'GRID', 'HACK', 'ION', 'JAVA', 'KERNEL', 'LOOP', 'MATRIX', 'NODE', 'OCTAL', 'PIXEL', 'QUANTUM', 'RADIO', 'SIGNAL', 'TERMINAL', 'ULTRA', 'VECTOR', 'WAVE', 'XENON', 'YOTT', 'ZERO'];
 
@@ -25,26 +25,22 @@
         return `ZERO${Date.now().toString().slice(-4)}`;
     };
 
-    // --------------------------------------------------------
     // Google Auth
-    // --------------------------------------------------------
     let googleInitialized = false;
 
     function initGoogle() {
         if (window.google && window.google.accounts && !googleInitialized) {
             google.accounts.id.initialize({
-                client_id: '678193136238-qcernuqkp94rtpakp53g5t8qf3nepp6l.apps.googleusercontent.com',
+                client_id: '678193136238-qcernuqkp94rtpakp53g5t8qf3nepp6l.apps.googleusercontent.com', // Reemplaza con tu Client ID real
                 callback: window.handleGoogleCredential
             });
             googleInitialized = true;
             console.log('Google Auth inicializado correctamente');
         } else if (!googleInitialized) {
-            // Reintentar en 500ms
             setTimeout(initGoogle, 500);
         }
     }
 
-    // Iniciar el proceso de inicialización en cuanto sea posible
     initGoogle();
 
     window.handleGoogleCredential = async (response) => {
@@ -73,25 +69,21 @@
         }
     };
 
-    // Evento del botón
     const googleBtn = document.getElementById('btn-google-login');
     if (googleBtn) {
         googleBtn.addEventListener('click', () => {
             if (window.google && window.google.accounts && googleInitialized) {
-                google.accounts.id.prompt(); // Muestra el selector de cuentas
+                google.accounts.id.prompt();
             } else {
                 alert('Cargando Google API, espera un momento...');
-                // Forzar reintento
                 initGoogle();
             }
         });
     }
 
-    // --------------------------------------------------------
     // Login con clave
-    // --------------------------------------------------------
     window.loginConClave = async function() {
-        const clave = document.getElementById('access-key-input')?.value.trim().toUpperCase();
+        const clave = window.DOM?.accessKeyInput?.value.trim().toUpperCase();
         if (!clave) return;
         try {
             const { data, error } = await window.supabaseClient
