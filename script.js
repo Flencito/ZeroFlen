@@ -397,18 +397,32 @@
         DOM.btnEnter.classList.add('loading');
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
-        // Generar clave única (función definida en auth.js o aquí, pero mejor tenerla en auth.js)
+        // Generar clave única (función definida en auth.js)
         const accessKey = await (window.generarAccessKeyUnico ? window.generarAccessKeyUnico() : 'ZERO' + Date.now().toString().slice(-4));
 
         try {
-            const newObserver = await window.db.insertObserver({
+            // Preparar datos del nuevo observador
+            const newObserverData = {
                 name: nombre,
                 color: color,
                 country: country,
                 accesses: 1,
                 show_country: showCountry,
                 access_key: accessKey
-            });
+            };
+
+            // Si hay un google_id pendiente, lo agregamos
+            if (window.pendingGoogle && window.pendingGoogle.googleId) {
+                newObserverData.google_id = window.pendingGoogle.googleId;
+            }
+
+            const newObserver = await window.db.insertObserver(newObserverData);
+            
+            // Limpiar pendingGoogle (si existía)
+            if (window.pendingGoogle) {
+                delete window.pendingGoogle;
+            }
+
             const observer = {
                 id: newObserver.id,
                 name: newObserver.name,
