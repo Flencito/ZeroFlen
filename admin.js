@@ -1,6 +1,6 @@
 // admin.js
 (function() {
-    const ADMIN_IDS = [1]; // ID del director
+    const ADMIN_IDS = [1];
     if (!window.currentObserver || !ADMIN_IDS.includes(window.currentObserver.id)) return;
 
     if (document.getElementById('admin-panel')) return;

@@ -100,14 +100,14 @@
     // Estado global
     // --------------------------------------------------------
     window.currentObserver = null;
-    window.pendingGoogle = null; // Para registro con Google
+    window.pendingGoogle = null;
 
     let rankingManager = null;
     let nameValidator = null;
     let colorSelector = null;
 
     // --------------------------------------------------------
-    // Reproductor global (MusicPlayer) - IDÉNTICO AL ORIGINAL
+    // Reproductor global (MusicPlayer)
     // --------------------------------------------------------
     const MusicPlayer = (function() {
         let playlist = [];
@@ -158,7 +158,12 @@
         function getState() {
             if (!youtubePlayer) return { current: null, isPlaying: false, currentTime: 0, duration: 0 };
             const currentSong = playlist[currentIndex] || null;
-            return { current: currentSong, isPlaying, currentTime: youtubePlayer.getCurrentTime() || 0, duration: youtubePlayer.getDuration() || 0 };
+            return {
+                current: currentSong,
+                isPlaying: isPlaying,
+                currentTime: youtubePlayer.getCurrentTime() || 0,
+                duration: youtubePlayer.getDuration() || 0
+            };
         }
 
         return {
@@ -188,7 +193,7 @@
     })();
 
     // --------------------------------------------------------
-    // MiniPlayerLobby - IDÉNTICO AL ORIGINAL
+    // MiniPlayerLobby
     // --------------------------------------------------------
     class MiniPlayerLobby {
         constructor() {
@@ -210,6 +215,7 @@
             this.setupProgressBar();
             this.unsubscribe = MusicPlayer.onStateChange(state => this.updateUI(state));
         }
+
         initEventListeners() {
             this.playPauseBtn.addEventListener('click', () => MusicPlayer.togglePlayPause());
             this.prevBtn.addEventListener('click', () => MusicPlayer.prev());
@@ -217,6 +223,7 @@
             this.closeBtn.addEventListener('click', () => this.hide());
             this.toggleBtn.addEventListener('click', () => this.show());
         }
+
         setupProgressBar() {
             if (!this.progressContainer) return;
             this.progressContainer.addEventListener('mousemove', (e) => {
@@ -243,8 +250,10 @@
                 }
             });
         }
+
         show() { this.container.style.display = 'block'; this.toggleBtn.style.display = 'none'; this.isVisible = true; }
         hide() { this.container.style.display = 'none'; this.toggleBtn.style.display = 'flex'; this.isVisible = false; }
+
         updateUI(state) {
             if (state.current) {
                 this.cover.src = state.current.cover;
@@ -270,7 +279,7 @@
     }
 
     // --------------------------------------------------------
-    // NameValidator - IDÉNTICO AL ORIGINAL (usa db)
+    // NameValidator
     // --------------------------------------------------------
     class NameValidator {
         constructor() {
@@ -279,11 +288,13 @@
             this.pattern = /^[a-zA-Z0-9_-]{3,20}$/;
             this.debounceTimer = null;
         }
+
         validar_formato(nombre) {
             if (!nombre || nombre.length < this.minLength) return { valid: false, msg: 'Mínimo 3 caracteres' };
             if (!this.pattern.test(nombre)) return { valid: false, msg: 'Solo letras, números, guiones y guiones bajos' };
             return { valid: true, msg: '' };
         }
+
         async validar_unicidad(nombre) {
             try {
                 const data = await window.db.getObserverByName(nombre);
@@ -293,6 +304,7 @@
                 return { valid: false, msg: 'Error al validar' };
             }
         }
+
         async validar_con_debounce(nombre) {
             clearTimeout(this.debounceTimer);
             const formatoOk = this.validar_formato(nombre);
@@ -307,7 +319,7 @@
     }
 
     // --------------------------------------------------------
-    // ColorSelector - IDÉNTICO AL ORIGINAL
+    // ColorSelector (con reintento)
     // --------------------------------------------------------
     class ColorSelector {
         constructor() {
@@ -323,17 +335,22 @@
             this.selected = null;
             this.container = document.getElementById('color-palette');
             if (!this.container) {
-                console.error('Error: No se encontró #color-palette');
+                console.warn('ColorSelector: No se encontró #color-palette, reintentando...');
                 setTimeout(() => {
                     this.container = document.getElementById('color-palette');
-                    if (this.container) this.renderPalette();
-                }, 100);
+                    if (this.container) {
+                        this.renderPalette();
+                    } else {
+                        console.error('ColorSelector: No se pudo encontrar el contenedor después de reintentar');
+                    }
+                }, 200);
                 return;
             }
             this.renderPalette();
         }
 
         renderPalette() {
+            if (!this.container) return;
             this.container.innerHTML = '';
             this.colors.forEach(c => {
                 const btn = document.createElement('button');
@@ -365,7 +382,7 @@
     }
 
     // --------------------------------------------------------
-    // Funciones del Gatekeeper (modificadas para usar db y google)
+    // Funciones del Gatekeeper
     // --------------------------------------------------------
     function validar_completitud() {
         const nombre = DOM.nameInput.value.trim();
@@ -401,7 +418,6 @@
         DOM.btnEnter.classList.add('loading');
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
-        // Generar clave única (función de auth.js)
         const accessKey = await window.generarAccessKeyUnico();
 
         try {
@@ -421,9 +437,11 @@
 
             const newObserver = await window.db.insertObserver(newObserverData);
 
-            // Limpiar pendingGoogle
+            // Limpiar pendingGoogle y restaurar botón de Google
             if (window.pendingGoogle) {
                 window.pendingGoogle = null;
+                const googleBtn = document.querySelector('.google-auth');
+                if (googleBtn) googleBtn.style.display = 'block';
             }
 
             const observer = {
@@ -454,13 +472,14 @@
     function abrirGatekeeper() { DOM.gatekeeperModal.classList.add('active'); }
 
     // --------------------------------------------------------
-    // RankingManager (usando db)
+    // RankingManager
     // --------------------------------------------------------
     class RankingManager {
         constructor() {
             this.observers = [];
             this.updateInterval = null;
         }
+
         async cargar_ranking() {
             try {
                 const data = await window.db.getRanking();
@@ -469,6 +488,7 @@
                 if (window.currentObserver) this.actualizar_observador_actual();
             } catch (error) { console.error('Error cargando ranking:', error); }
         }
+
         render_ranking() {
             DOM.rankingList.innerHTML = '';
             this.observers.forEach(obs => {
@@ -489,6 +509,7 @@
             });
             DOM.observerCount.textContent = `#${this.observers.length} activos`;
         }
+
         actualizar_observador_actual() {
             const obs = this.observers.find(o => o.name === window.currentObserver.name);
             if (obs) {
@@ -509,6 +530,7 @@
                 `;
             }
         }
+
         async registrar_acceso() {
             if (!window.currentObserver) return;
             try {
@@ -520,6 +542,7 @@
                 await this.cargar_ranking();
             } catch (error) { console.error('Error en check-in:', error); }
         }
+
         start_auto_update() {
             if (this.updateInterval) clearInterval(this.updateInterval);
             this.updateInterval = setInterval(() => this.cargar_ranking(), 5000);
@@ -530,7 +553,7 @@
     }
 
     // --------------------------------------------------------
-    // Galería Modal (IDÉNTICA AL ORIGINAL)
+    // Galería Modal
     // --------------------------------------------------------
     class GaleriaModal {
         constructor() {
@@ -700,7 +723,7 @@
     }
 
     // --------------------------------------------------------
-    // ComunidadModal (modificada para usar centinel y db)
+    // ComunidadModal (con centinel)
     // --------------------------------------------------------
     class ComunidadModal {
         constructor() {
@@ -774,7 +797,6 @@
         }
 
         suscribirse() {
-            // Suscripción en tiempo real usando Supabase
             this.unsubscribe = window.supabaseClient
                 .channel('messages-channel')
                 .on('postgres_changes', 
@@ -797,14 +819,12 @@
             const contenido = this.input.value.trim();
             if (!contenido || !window.currentObserver) return;
 
-            // Verificar si está muteado (centinel)
             const muteado = await window.centinel.estaMuteado(window.currentObserver.id);
             if (muteado) {
                 alert('Estás muteado por 30 minutos. No puedes enviar mensajes.');
                 return;
             }
 
-            // Escanear lenguaje prohibido
             if (window.centinel.escanearMensaje(contenido)) {
                 await window.centinel.procesarInfraccion(window.currentObserver.id, contenido);
                 const warning = document.createElement('div');
@@ -832,12 +852,13 @@
     }
 
     // --------------------------------------------------------
-    // IdentidadModal (IDÉNTICA AL ORIGINAL, pero usando db)
+    // IdentidadModal (con cambio de nombre)
     // --------------------------------------------------------
     class IdentidadModal {
         constructor() {
             this.modal = null;
             this.toggle = null;
+            this.nameInput = null;
         }
 
         abrir() {
@@ -855,11 +876,12 @@
                             <button class="btn-close-identidad">✕</button>
                         </div>
                         <div class="identidad-content">
-                            <p class="identidad-info">
-                                <strong>Nombre:</strong> ${window.currentObserver.name}<br>
-                                <strong>Color:</strong> <span style="color: ${window.currentObserver.color};">${window.currentObserver.color}</span><br>
-                                <strong>País:</strong> ${window.currentObserver.country}
-                            </p>
+                            <div class="identidad-campo">
+                                <label class="label">NOMBRE</label>
+                                <input type="text" id="identidad-nombre" class="input-name" value="${window.currentObserver.name}" maxlength="20">
+                            </div>
+                            <p><strong>Color:</strong> <span style="color: ${window.currentObserver.color};">${window.currentObserver.color}</span></p>
+                            <p><strong>País:</strong> ${window.currentObserver.country}</p>
                             <div class="identidad-toggle">
                                 <span class="identidad-toggle-label">Mostrar país en el ranking</span>
                                 <div class="toggle-switch">
@@ -873,7 +895,7 @@
                                 <button class="btn-copiar" id="btn-copiar-clave">📋</button>
                             </div>
                             <div class="identidad-actions">
-                                <button class="btn-identidad-guardar">GUARDAR</button>
+                                <button class="btn-identidad-guardar">GUARDAR CAMBIOS</button>
                             </div>
                         </div>
                     </div>
@@ -882,6 +904,7 @@
             document.body.insertAdjacentHTML('beforeend', html);
             this.modal = document.getElementById('identidad-modal');
             this.toggle = document.getElementById('identidad-show-country');
+            this.nameInput = document.getElementById('identidad-nombre');
             this.agregarEventos();
         }
 
@@ -901,19 +924,39 @@
         }
 
         async guardar() {
-            const nuevoValor = this.toggle.checked;
-            if (nuevoValor === window.currentObserver.show_country) {
-                this.cerrar();
+            const nuevoNombre = this.nameInput.value.trim();
+            const nuevoShowCountry = this.toggle.checked;
+
+            if (!nuevoNombre || nuevoNombre.length < 3 || !/^[a-zA-Z0-9_-]{3,20}$/.test(nuevoNombre)) {
+                alert('Nombre inválido. Debe tener entre 3 y 20 caracteres (letras, números, guiones)');
                 return;
             }
+
+            if (nuevoNombre !== window.currentObserver.name) {
+                const existe = await window.db.getObserverByName(nuevoNombre);
+                if (existe) {
+                    alert('Ese nombre ya está en uso');
+                    return;
+                }
+            }
+
             try {
-                await window.db.updateObserver(window.currentObserver.id, { show_country: nuevoValor });
-                window.currentObserver.show_country = nuevoValor;
+                await window.db.updateObserver(window.currentObserver.id, {
+                    name: nuevoNombre,
+                    show_country: nuevoShowCountry
+                });
+
+                window.currentObserver.name = nuevoNombre;
+                window.currentObserver.show_country = nuevoShowCountry;
                 localStorage.setItem('observer', JSON.stringify(window.currentObserver));
+
+                // Actualizar el perfil en el menú
+                const menu = new MenuSidebar(window.currentObserver);
                 await rankingManager.cargar_ranking();
+
                 this.cerrar();
             } catch (error) {
-                console.error('Error al actualizar preferencia:', error);
+                console.error('Error al guardar cambios:', error);
                 alert('Error al guardar');
             }
         }
@@ -927,7 +970,7 @@
     }
 
     // --------------------------------------------------------
-    // TemasModal (IDÉNTICA AL ORIGINAL)
+    // TemasModal
     // --------------------------------------------------------
     class TemasModal {
         constructor() {
@@ -1001,7 +1044,7 @@
     }
 
     // --------------------------------------------------------
-    // Menú Sidebar (modificado para usar las clases)
+    // Menú Sidebar
     // --------------------------------------------------------
     class MenuSidebar {
         constructor(observer) {

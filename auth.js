@@ -1,7 +1,5 @@
 // auth.js
 (function() {
-    // Dependencias: window.db, window.DOM, window.cerrarGatekeeper, window.abrirGatekeeper
-
     const TECH_WORDS = ['NEON', 'CORE', 'GHOST', 'VOID', 'ATOM', 'BYTE', 'CYBER', 'DIGITAL', 'ECHO', 'FLUX', 'GRID', 'HACK', 'ION', 'JAVA', 'KERNEL', 'LOOP', 'MATRIX', 'NODE', 'OCTAL', 'PIXEL', 'QUANTUM', 'RADIO', 'SIGNAL', 'TERMINAL', 'ULTRA', 'VECTOR', 'WAVE', 'XENON', 'YOTT', 'ZERO'];
 
     function generarAccessKey() {
@@ -25,13 +23,12 @@
         return `ZERO${Date.now().toString().slice(-4)}`;
     };
 
-    // Google Auth
     let googleInitialized = false;
 
     function initGoogle() {
         if (window.google && window.google.accounts && !googleInitialized) {
             google.accounts.id.initialize({
-                client_id: '678193136238-qcernuqkp94rtpakp53g5t8qf3nepp6l.apps.googleusercontent.com', // Reemplaza con tu Client ID real
+                client_id: '678193136238-qcernuqkp94rtpakp53g5t8qf3nepp6l.apps.googleusercontent.com',
                 callback: window.handleGoogleCredential
             });
             googleInitialized = true;
@@ -58,10 +55,17 @@
                 location.reload();
             } else {
                 window.pendingGoogle = { googleId, email, name };
-                if (window.DOM && window.DOM.nameInput) window.DOM.nameInput.value = name;
                 const googleBtn = document.querySelector('.google-auth');
                 if (googleBtn) googleBtn.style.display = 'none';
-                if (window.DOM && window.DOM.registerForm) window.DOM.registerForm.style.display = 'block';
+                if (window.DOM && window.DOM.registerForm) {
+                    window.DOM.registerForm.style.display = 'block';
+                }
+                if (window.DOM && window.DOM.nameInput) {
+                    window.DOM.nameInput.value = name;
+                    const event = new Event('input', { bubbles: true });
+                    window.DOM.nameInput.dispatchEvent(event);
+                }
+                alert('Completa tu registro con un color y preferencias');
             }
         } catch (e) {
             console.error('Error en Google Auth:', e);
@@ -81,7 +85,6 @@
         });
     }
 
-    // Login con clave
     window.loginConClave = async function() {
         const clave = window.DOM?.accessKeyInput?.value.trim().toUpperCase();
         if (!clave) return;

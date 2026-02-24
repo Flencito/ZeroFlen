@@ -8,7 +8,6 @@
     window.supabaseClient = supabaseClient;
 
     window.db = {
-        // Observers
         async getObserverByName(name) {
             const { data, error } = await supabaseClient.from('observers').select('*').eq('name', name).maybeSingle();
             if (error) throw error; return data;
@@ -33,7 +32,6 @@
             const { data, error } = await supabaseClient.from('observers').select('name, color, country, accesses, show_country').order('accesses', { ascending: false });
             if (error) throw error; return data;
         },
-        // Mensajes
         async getMessages() {
             const { data, error } = await supabaseClient
                 .from('messages')
@@ -45,7 +43,6 @@
             const { data, error } = await supabaseClient.from('messages').insert([message]).select();
             if (error) throw error; return data[0];
         },
-        // IP Registry
         async getIpInfo(ip) {
             const { data, error } = await supabaseClient.from('ip_registry').select('*').eq('ip_address', ip).maybeSingle();
             if (error) throw error; return data;
@@ -54,7 +51,6 @@
             const { error } = await supabaseClient.from('ip_registry').upsert([ipData], { onConflict: 'ip_address' });
             if (error) throw error;
         },
-        // Access Keys
         async validateAccessKey(key) {
             const { data, error } = await supabaseClient.from('access_keys').select('*').eq('key_code', key).eq('is_used', false).maybeSingle();
             if (error) throw error; return data;
