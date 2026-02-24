@@ -83,7 +83,7 @@
         miniProgressBar: document.getElementById('mini-progress-bar'),
         miniProgressTooltip: document.getElementById('mini-progress-tooltip'),
 
-        // Modales (comunidad y temas ya existen en HTML)
+        // Modales
         comunidadModal: document.getElementById('comunidad-modal'),
         temasModal: document.getElementById('temas-modal'),
         comunidadMensajes: document.getElementById('comunidad-mensajes'),
@@ -105,6 +105,7 @@
     let rankingManager = null;
     let nameValidator = null;
     let colorSelector = null;
+    let menuSidebar = null; // AÑADIDO: para poder actualizarlo globalmente
 
     // --------------------------------------------------------
     // Reproductor global (MusicPlayer)
@@ -456,7 +457,8 @@
             window.currentObserver = observer;
             cerrarGatekeeper();
 
-            new MenuSidebar(window.currentObserver);
+            menuSidebar = new MenuSidebar(window.currentObserver); // AÑADIDO: asignar a variable global
+            window.menuSidebar = menuSidebar; // AÑADIDO: exponer globalmente
             await rankingManager.cargar_ranking();
 
         } catch (error) {
@@ -723,7 +725,7 @@
     }
 
     // --------------------------------------------------------
-    // ComunidadModal (con centinel)
+    // ComunidadModal (con centinel y tiempo real mejorado)
     // --------------------------------------------------------
     class ComunidadModal {
         constructor() {
@@ -796,12 +798,15 @@
             this.mensajesContainer.scrollTop = this.mensajesContainer.scrollHeight;
         }
 
+        // AÑADIDO: Suscripción mejorada con logs y canal único
         suscribirse() {
+            const channelName = 'messages-channel-' + Date.now(); // nombre único
             this.unsubscribe = window.supabaseClient
-                .channel('messages-channel')
+                .channel(channelName)
                 .on('postgres_changes', 
                     { event: 'INSERT', schema: 'public', table: 'messages' }, 
                     async (payload) => {
+                        console.log('🔔 Nuevo mensaje en tiempo real:', payload);
                         const autor = await window.db.getObserverById(payload.new.autor_id);
                         if (autor) {
                             const nuevoMensaje = {
@@ -852,7 +857,7 @@
     }
 
     // --------------------------------------------------------
-    // IdentidadModal (con cambio de nombre)
+    // IdentidadModal (con cambio de nombre y actualización del menú)
     // --------------------------------------------------------
     class IdentidadModal {
         constructor() {
@@ -950,8 +955,11 @@
                 window.currentObserver.show_country = nuevoShowCountry;
                 localStorage.setItem('observer', JSON.stringify(window.currentObserver));
 
-                // Actualizar el perfil en el menú
-                const menu = new MenuSidebar(window.currentObserver);
+                // Actualizar el perfil en el menú (AÑADIDO)
+                if (window.menuSidebar) {
+                    window.menuSidebar.actualizarPerfil();
+                }
+
                 await rankingManager.cargar_ranking();
 
                 this.cerrar();
@@ -1213,7 +1221,8 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
-        new MenuSidebar(window.currentObserver);
+        menuSidebar = new MenuSidebar(window.currentObserver); // AÑADIDO: asignar a variable global
+        window.menuSidebar = menuSidebar; // AÑADIDO: exponer globalmente
 
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
             new MiniPlayerLobby();
