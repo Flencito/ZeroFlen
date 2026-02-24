@@ -2388,3 +2388,105 @@ input:checked + .toggle-label:before {
     align-items: center;
     justify-content: center;
 }
+
+/* ============ MEJORAS RESPONSIVE PARA MÓVIL ============ */
+
+/* Ajustes para el modal de temas en móvil */
+@media (max-width: 768px) {
+    .temas-modal .temas-grid {
+        grid-template-columns: repeat(2, 1fr) !important; /* Forzar 2 columnas */
+        gap: 8px;
+    }
+    .temas-modal .temas-container {
+        padding: 15px !important;
+        width: 90% !important;
+        max-width: 400px; /* Limitar ancho */
+    }
+    .temas-modal .tema-opcion {
+        padding: 8px 4px !important;
+    }
+    .temas-modal .tema-color {
+        width: 25px;
+        height: 25px;
+    }
+    .temas-modal .tema-nombre {
+        font-size: 0.65rem;
+    }
+    .temas-modal .tema-preview {
+        font-size: 0.6rem;
+    }
+}
+
+/* Botones del menú lateral en móvil */
+@media (max-width: 768px) {
+    .menu-sidebar .btn-galeria,
+    .menu-sidebar .btn-comunidad,
+    .menu-sidebar .btn-identidad,
+    .menu-sidebar .btn-temas {
+        font-size: 0.75rem !important;
+        padding: 8px 4px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.2;
+        letter-spacing: 1px;
+    }
+}
+
+/* Ajustes generales para modales en móvil */
+@media (max-width: 768px) {
+    .gatekeeper-container,
+    .comunidad-container,
+    .temas-container,
+    .identidad-container,
+    .galeria-container {
+        width: 95% !important;
+        padding: 15px !important;
+    }
+    
+    /* Para el modal de galería, reducir el tamaño de las cards */
+    .galeria-modal .galeria-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+    
+    .galeria-modal .decode-btn {
+        font-size: 0.5rem !important;
+        padding: 4px 6px !important;
+    }
+}
+
+/* Ajuste para el mini reproductor en móvil (ya existía, pero lo reforzamos) */
+@media (max-width: 600px) {
+    .mini-player-container {
+        width: 95vw;
+        padding: 10px;
+    }
+    .mini-player-top {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .mini-player-info {
+        width: 100%;
+        justify-content: center;
+    }
+    .mini-player-controls {
+        justify-content: center;
+    }
+    .music-toggle-btn {
+        bottom: 20px;
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Asegurar que los botones de cierre de modales sean táctiles */
+.btn-close-galeria,
+.btn-close-comunidad,
+.btn-close-identidad,
+.btn-close-temas {
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
