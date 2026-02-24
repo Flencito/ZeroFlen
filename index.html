@@ -251,6 +251,55 @@
         </div>
     </div>
 
+    <!-- ============ MODAL GALERÍA ============ -->
+    <div id="galeria-modal" class="galeria-modal">
+        <div class="galeria-overlay"></div>
+        <div class="galeria-container">
+            <div class="galeria-header">
+                <h2>🎵 MUTACIÓN MÚSICA</h2>
+                <button class="btn-close-galeria">✕</button>
+            </div>
+            <div class="galeria-grid" id="galeria-grid">
+                <!-- Las cards se generarán con JS -->
+            </div>
+            <div class="galeria-footer">
+                <button class="btn-volver-galeria">◄ VOLVER AL LOBBY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL IDENTIDAD ============ -->
+    <div id="identidad-modal" class="identidad-modal">
+        <div class="identidad-overlay"></div>
+        <div class="identidad-container">
+            <div class="identidad-header">
+                <h2>👤 IDENTIDAD DEL OBSERVADOR</h2>
+                <button class="btn-close-identidad">✕</button>
+            </div>
+            <div class="identidad-content">
+                <p class="identidad-info">Aquí puedes ver tu información y gestionar tu privacidad.</p>
+                <div class="identidad-datos" id="identidad-datos">
+                    <!-- Datos cargados dinámicamente -->
+                </div>
+                <div class="identidad-toggle">
+                    <span class="identidad-toggle-label">Mostrar país en el ranking</span>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="identidad-show-country" checked>
+                        <label for="identidad-show-country" class="toggle-label"></label>
+                    </div>
+                </div>
+                <div class="identidad-clave">
+                    <span class="clave-label">LLAVE:</span>
+                    <span class="clave-valor" id="identidad-clave-valor">---</span>
+                    <button class="btn-copiar" id="btn-copiar-clave" title="Copiar clave">📋</button>
+                </div>
+            </div>
+            <div class="identidad-footer">
+                <button class="btn-volver-identidad">◄ VOLVER AL LOBBY</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS (cargar en orden) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>

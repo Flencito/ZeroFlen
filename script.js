@@ -81,13 +81,29 @@
         musicToggleIcon: document.getElementById('music-toggle-icon'),
         miniProgressContainer: document.getElementById('mini-progress-container'),
         miniProgressBar: document.getElementById('mini-progress-bar'),
-        miniProgressTooltip: document.getElementById('mini-progress-tooltip')
+        miniProgressTooltip: document.getElementById('mini-progress-tooltip'),
+
+        // Modales (nuevos)
+        galeriaModal: document.getElementById('galeria-modal'),
+        comunidadModal: document.getElementById('comunidad-modal'),
+        identidadModal: document.getElementById('identidad-modal'),
+        temasModal: document.getElementById('temas-modal'),
+        galeriaGrid: document.getElementById('galeria-grid'),
+        comunidadMensajes: document.getElementById('comunidad-mensajes'),
+        comunidadInput: document.getElementById('comunidad-input'),
+        btnTransmitir: document.getElementById('btn-transmitir'),
+        identidadDatos: document.getElementById('identidad-datos'),
+        identidadShowCountry: document.getElementById('identidad-show-country'),
+        identidadClaveValor: document.getElementById('identidad-clave-valor'),
+        btnCopiarClave: document.getElementById('btn-copiar-clave'),
+        temasGrid: document.getElementById('temas-grid'),
+        btnTemasGuardar: document.getElementById('btn-temas-guardar')
     };
 
     // --------------------------------------------------------
     // Estado global (expuesto para otros módulos)
     // --------------------------------------------------------
-    window.currentObserver = null; // { id, name, color, country, show_country, access_key }
+    window.currentObserver = null;
     window.DOM = DOM;
 
     // --------------------------------------------------------
@@ -102,7 +118,7 @@
     };
 
     // --------------------------------------------------------
-    // Reproductor global (sin cambios)
+    // Reproductor global
     // --------------------------------------------------------
     const MusicPlayer = (function() {
         let playlist = [];
@@ -183,7 +199,7 @@
     })();
 
     // --------------------------------------------------------
-    // MiniPlayerLobby (simplificado por brevedad, pero igual que antes)
+    // MiniPlayerLobby
     // --------------------------------------------------------
     class MiniPlayerLobby {
         constructor() {
@@ -265,7 +281,7 @@
     }
 
     // --------------------------------------------------------
-    // NameValidator (sin cambios)
+    // NameValidator
     // --------------------------------------------------------
     class NameValidator {
         constructor() {
@@ -302,7 +318,7 @@
     }
 
     // --------------------------------------------------------
-    // ColorSelector (corregido)
+    // ColorSelector
     // --------------------------------------------------------
     class ColorSelector {
         constructor() {
@@ -319,7 +335,6 @@
             this.container = document.getElementById('color-palette');
             if (!this.container) {
                 console.error('Error: No se encontró #color-palette');
-                // Reintentar después de un breve momento (por si el DOM aún no está listo)
                 setTimeout(() => {
                     this.container = document.getElementById('color-palette');
                     if (this.container) this.renderPalette();
@@ -397,11 +412,9 @@
         DOM.btnEnter.classList.add('loading');
         DOM.btnEnter.innerHTML = '<span class="spinner-small"></span> ACCEDIENDO...';
 
-        // Generar clave única (función definida en auth.js)
         const accessKey = await (window.generarAccessKeyUnico ? window.generarAccessKeyUnico() : 'ZERO' + Date.now().toString().slice(-4));
 
         try {
-            // Preparar datos del nuevo observador
             const newObserverData = {
                 name: nombre,
                 color: color,
@@ -411,14 +424,12 @@
                 access_key: accessKey
             };
 
-            // Si hay un google_id pendiente, lo agregamos
             if (window.pendingGoogle && window.pendingGoogle.googleId) {
                 newObserverData.google_id = window.pendingGoogle.googleId;
             }
 
             const newObserver = await window.db.insertObserver(newObserverData);
             
-            // Limpiar pendingGoogle (si existía)
             if (window.pendingGoogle) {
                 delete window.pendingGoogle;
             }
@@ -524,11 +535,12 @@
     }
 
     // --------------------------------------------------------
-    // Galería Modal (simplificada, igual que antes)
+    // Galería Modal (completa)
     // --------------------------------------------------------
     class GaleriaModal {
         constructor() {
-            this.modal = null;
+            this.modal = DOM.galeriaModal;
+            this.grid = DOM.galeriaGrid;
             this.proyectos = [
                 { id: 1, name: 'Brighter', category: 'Hazbin Hotel', youtubeId: 'eTpEdZoAYbM', cover: 'https://img.youtube.com/vi/eTpEdZoAYbM/0.jpg' },
                 { id: 2, name: 'Jester', category: 'The Amazing Digital Circus', youtubeId: 'FxOFYp_ZA8M', cover: 'https://img.youtube.com/vi/FxOFYp_ZA8M/0.jpg' },
@@ -536,23 +548,140 @@
             ];
             this.currentPlaylist = this.proyectos.filter(p => p.youtubeId);
             this.unsubscribe = MusicPlayer.onStateChange(state => this.syncWithPlayer(state));
+            this.initCloseButtons();
         }
-        abrir() { /* ... (código de creación de modal, igual que antes) */ }
-        syncWithPlayer(state) { /* ... */ }
+
+        initCloseButtons() {
+            const closeBtn = this.modal.querySelector('.btn-close-galeria');
+            const volverBtn = this.modal.querySelector('.btn-volver-galeria');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.cerrar());
+            if (volverBtn) volverBtn.addEventListener('click', () => this.cerrar());
+        }
+
+        abrir() {
+            this.modal.classList.add('visible');
+            this.renderGrid();
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+        }
+
+        renderGrid() {
+            this.grid.innerHTML = '';
+            this.proyectos.forEach(proj => {
+                const card = document.createElement('div');
+                card.className = 'gallery-card';
+                card.innerHTML = `
+                    <div class="card-image-wrapper">
+                        <img class="card-image" src="${proj.cover}" alt="${proj.name}">
+                        <div class="card-overlay">
+                            <button class="decode-btn" data-id="${proj.id}">🎵 REPRODUCIR</button>
+                        </div>
+                        <div class="card-info">
+                            <div class="card-title">${proj.name}</div>
+                            <div class="card-subtitle">${proj.category}</div>
+                        </div>
+                    </div>
+                `;
+                const playBtn = card.querySelector('.decode-btn');
+                playBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.reproducir(proj);
+                });
+                this.grid.appendChild(card);
+            });
+        }
+
+        reproducir(proj) {
+            MusicPlayer.setPlaylist(this.currentPlaylist);
+            MusicPlayer.playSong(proj);
+            this.cerrar();
+        }
+
+        syncWithPlayer(state) {
+            // Opcional
+        }
     }
 
     // --------------------------------------------------------
-    // ComunidadModal (con integración de centinela)
+    // ComunidadModal (completa)
     // --------------------------------------------------------
     class ComunidadModal {
         constructor() {
-            this.modal = null;
-            this.mensajesContainer = null;
-            this.input = null;
-            this.btnTransmitir = null;
+            this.modal = DOM.comunidadModal;
+            this.mensajesContainer = DOM.comunidadMensajes;
+            this.input = DOM.comunidadInput;
+            this.btnTransmitir = DOM.btnTransmitir;
             this.unsubscribe = null;
+            this.initCloseButtons();
+            this.initEvents();
         }
-        abrir() { /* ... (crear modal, cargar mensajes, suscribirse) */ }
+
+        initCloseButtons() {
+            const closeBtn = this.modal.querySelector('.btn-close-comunidad');
+            const volverBtn = this.modal.querySelector('.btn-volver-comunidad');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.cerrar());
+            if (volverBtn) volverBtn.addEventListener('click', () => this.cerrar());
+        }
+
+        initEvents() {
+            this.btnTransmitir.addEventListener('click', () => this.enviarMensaje());
+            this.input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.enviarMensaje();
+            });
+        }
+
+        async abrir() {
+            this.modal.classList.add('visible');
+            await this.cargarMensajes();
+            this.suscribirse();
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+            if (this.unsubscribe) {
+                this.unsubscribe();
+                this.unsubscribe = null;
+            }
+        }
+
+        async cargarMensajes() {
+            try {
+                const mensajes = await window.db.getMessages();
+                this.mensajesContainer.innerHTML = '';
+                mensajes.forEach(msg => this.agregarMensajeAlDOM(msg));
+                this.scrollAlFinal();
+            } catch (error) {
+                console.error('Error cargando mensajes:', error);
+            }
+        }
+
+        agregarMensajeAlDOM(mensaje) {
+            const autor = mensaje.observers;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'mensaje';
+            msgDiv.innerHTML = `
+                <div class="mensaje-avatar" style="background: ${autor.color};">${autor.name.charAt(0).toUpperCase()}</div>
+                <div class="mensaje-contenido">
+                    <div class="mensaje-header">
+                        <span class="mensaje-autor" style="color: ${autor.color};">${autor.name}</span>
+                        <span class="mensaje-tiempo">${new Date(mensaje.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="mensaje-texto">${mensaje.contenido}</div>
+                </div>
+            `;
+            this.mensajesContainer.appendChild(msgDiv);
+        }
+
+        scrollAlFinal() {
+            this.mensajesContainer.scrollTop = this.mensajesContainer.scrollHeight;
+        }
+
+        suscribirse() {
+            // Aquí podrías implementar la suscripción en tiempo real con Supabase
+        }
+
         async enviarMensaje() {
             const contenido = this.input.value.trim();
             if (!contenido || !window.currentObserver) return;
@@ -587,16 +716,136 @@
                 alert('Error al enviar mensaje');
             }
         }
-        // ... otros métodos (crearModal, agregarMensajeAlDOM, etc.) igual que antes
     }
 
     // --------------------------------------------------------
-    // IdentidadModal y TemasModal (sin cambios)
+    // IdentidadModal (completa)
     // --------------------------------------------------------
-    class IdentidadModal { /* ... */ }
-    class TemasModal { /* ... */ }
+    class IdentidadModal {
+        constructor() {
+            this.modal = DOM.identidadModal;
+            this.datosContainer = DOM.identidadDatos;
+            this.toggle = DOM.identidadShowCountry;
+            this.claveValor = DOM.identidadClaveValor;
+            this.btnCopiar = DOM.btnCopiarClave;
+            this.initCloseButtons();
+            this.initEvents();
+        }
 
-    function aplicarTema(themeId) { /* ... */ }
+        initCloseButtons() {
+            const closeBtn = this.modal.querySelector('.btn-close-identidad');
+            const volverBtn = this.modal.querySelector('.btn-volver-identidad');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.cerrar());
+            if (volverBtn) volverBtn.addEventListener('click', () => this.cerrar());
+        }
+
+        initEvents() {
+            this.toggle.addEventListener('change', async () => {
+                if (window.currentObserver) {
+                    await window.db.updateObserver(window.currentObserver.id, { show_country: this.toggle.checked });
+                    window.currentObserver.show_country = this.toggle.checked;
+                    window.rankingManager.cargar_ranking();
+                }
+            });
+            this.btnCopiar.addEventListener('click', () => {
+                if (this.claveValor.textContent) {
+                    navigator.clipboard.writeText(this.claveValor.textContent);
+                    alert('Clave copiada al portapapeles');
+                }
+            });
+        }
+
+        abrir() {
+            if (!window.currentObserver) {
+                alert('No hay observador logueado');
+                return;
+            }
+            this.modal.classList.add('visible');
+            this.renderDatos();
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+        }
+
+        renderDatos() {
+            const obs = window.currentObserver;
+            this.datosContainer.innerHTML = `
+                <p><strong>Nombre:</strong> ${obs.name}</p>
+                <p><strong>Color:</strong> <span style="color: ${obs.color};">${obs.color}</span></p>
+                <p><strong>País:</strong> ${obs.country}</p>
+                <p><strong>Accesos:</strong> ${obs.accesses}</p>
+            `;
+            this.toggle.checked = obs.show_country;
+            this.claveValor.textContent = obs.access_key;
+        }
+    }
+
+    // --------------------------------------------------------
+    // TemasModal (completa)
+    // --------------------------------------------------------
+    class TemasModal {
+        constructor() {
+            this.modal = DOM.temasModal;
+            this.grid = DOM.temasGrid;
+            this.btnGuardar = DOM.btnTemasGuardar;
+            this.temas = [
+                { id: 'default', nombre: 'Neón', color: '#39FF14' },
+                { id: 'synthwave', nombre: 'Synthwave', color: '#ff00ff' },
+                { id: 'deepsea', nombre: 'Deep Sea', color: '#00d4ff' },
+                { id: 'amber', nombre: 'Ámbar', color: '#ffb000' },
+                { id: 'monochrome', nombre: 'Monocromo', color: '#ffffff' }
+            ];
+            this.selectedTheme = localStorage.getItem('zeroflen-theme') || 'default';
+            this.initCloseButtons();
+            this.initEvents();
+        }
+
+        initCloseButtons() {
+            const closeBtn = this.modal.querySelector('.btn-close-temas');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.cerrar());
+        }
+
+        initEvents() {
+            this.btnGuardar.addEventListener('click', () => this.guardar());
+        }
+
+        abrir() {
+            this.modal.classList.add('visible');
+            this.renderGrid();
+        }
+
+        cerrar() {
+            this.modal.classList.remove('visible');
+        }
+
+        renderGrid() {
+            this.grid.innerHTML = '';
+            this.temas.forEach(tema => {
+                const opcion = document.createElement('div');
+                opcion.className = 'tema-opcion';
+                if (tema.id === this.selectedTheme) opcion.classList.add('selected');
+                opcion.dataset.tema = tema.id;
+                opcion.innerHTML = `
+                    <div class="tema-color" style="background: ${tema.color};"></div>
+                    <div class="tema-nombre">${tema.nombre}</div>
+                    <div class="tema-preview">Vista previa</div>
+                `;
+                opcion.addEventListener('click', () => {
+                    document.querySelectorAll('.tema-opcion').forEach(opt => opt.classList.remove('selected'));
+                    opcion.classList.add('selected');
+                    this.selectedTheme = tema.id;
+                });
+                this.grid.appendChild(opcion);
+            });
+        }
+
+        guardar() {
+            aplicarTema(this.selectedTheme);
+            localStorage.setItem('zeroflen-theme', this.selectedTheme);
+            this.cerrar();
+        }
+    }
 
     // --------------------------------------------------------
     // Menú Sidebar
@@ -605,10 +854,10 @@
         constructor(observer) {
             this.observer = observer;
             this.actualizarPerfil();
-            DOM.btnGaleria.addEventListener('click', () => new GaleriaModal().abrir());
-            DOM.btnComunidad.addEventListener('click', () => new ComunidadModal().abrir());
-            DOM.btnIdentidad.addEventListener('click', () => new IdentidadModal().abrir());
-            DOM.btnTemas.addEventListener('click', () => new TemasModal().abrir());
+            DOM.btnGaleria.addEventListener('click', () => galeriaModal.abrir());
+            DOM.btnComunidad.addEventListener('click', () => comunidadModal.abrir());
+            DOM.btnIdentidad.addEventListener('click', () => identidadModal.abrir());
+            DOM.btnTemas.addEventListener('click', () => temasModal.abrir());
         }
         actualizarPerfil() {
             if (this.observer) {
@@ -688,6 +937,9 @@
     // --------------------------------------------------------
     // Inicialización
     // --------------------------------------------------------
+    let nameValidator, colorSelector, rankingManager, miniPlayerLobby, menuSidebar;
+    let galeriaModal, comunidadModal, identidadModal, temasModal;
+
     async function init() {
         window.zeroFlenUI = {
             recargar_datos: loadLobbyData,
@@ -703,7 +955,8 @@
         setInterval(updateTimestampBadge, 1000);
 
         await loadLobbyData();
-        window.rankingManager = new RankingManager();
+        rankingManager = new RankingManager();
+        window.rankingManager = rankingManager;
 
         // Configurar eventos del Gatekeeper
         if (DOM.btnShowLogin) {
@@ -739,9 +992,9 @@
                         abrirGatekeeper();
                     } else {
                         DOM.gatekeeperModal.classList.remove('active');
-                        await window.rankingManager.cargar_ranking();
-                        window.rankingManager.start_auto_update();
-                        await window.rankingManager.registrar_acceso();
+                        await rankingManager.cargar_ranking();
+                        rankingManager.start_auto_update();
+                        await rankingManager.registrar_acceso();
                     }
                 } else {
                     localStorage.removeItem('observer');
@@ -767,11 +1020,27 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
-        new MenuSidebar(window.currentObserver);
+        menuSidebar = new MenuSidebar(window.currentObserver);
 
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
-            new MiniPlayerLobby();
+            miniPlayerLobby = new MiniPlayerLobby();
         }
+
+        // Inicializar modales
+        galeriaModal = new GaleriaModal();
+        comunidadModal = new ComunidadModal();
+        identidadModal = new IdentidadModal();
+        temasModal = new TemasModal();
+
+        // Cerrar modales al hacer clic en el overlay
+        document.querySelectorAll('.galeria-modal .galeria-overlay, .comunidad-modal .comunidad-overlay, .identidad-modal .identidad-overlay, .temas-modal .temas-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    const modal = overlay.parentElement;
+                    modal.classList.remove('visible');
+                }
+            });
+        });
 
         if (DOM.btnToggleRankingMobile) {
             DOM.btnToggleRankingMobile.addEventListener('click', () => DOM.rankingSidebar.classList.toggle('visible'));
