@@ -28,7 +28,7 @@
     function initGoogle() {
         if (window.google && window.google.accounts && !googleInitialized) {
             google.accounts.id.initialize({
-                client_id: '678193136238-qcernuqkp94rtpakp53g5t8qf3nepp6l.apps.googleusercontent.com',
+                client_id: '678193136238-qcernuqkp94rtpakp53g5t8qf3nepp6l.apps.googleusercontent.com', // Reemplaza con tu Client ID real
                 callback: window.handleGoogleCredential
             });
             googleInitialized = true;
@@ -69,7 +69,7 @@
             }
         } catch (e) {
             console.error('Error en Google Auth:', e);
-            alert('Error al autenticar con Google');
+            alert('Error al autenticar con Google. Por favor, intenta de nuevo o usa otro método. Si estás en móvil, asegúrate de que las ventanas emergentes no estén bloqueadas.');
         }
     };
 
@@ -77,6 +77,7 @@
     if (googleBtn) {
         googleBtn.addEventListener('click', () => {
             if (window.google && window.google.accounts && googleInitialized) {
+                // En móvil, a veces el prompt no funciona bien; intentamos de todas formas
                 google.accounts.id.prompt();
             } else {
                 alert('Cargando Google API, espera un momento...');
