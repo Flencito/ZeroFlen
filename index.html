@@ -13,7 +13,10 @@
     <meta property="og:image" content="https://zeroflen.com/icono-zeroflen.png">
     <meta name="twitter:card" content="summary_large_image">
     <title>ZeroFlen</title>
+    <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="security.css">
+    <link rel="stylesheet" href="admin.css">
     <link rel="icon" type="image/png" href="icono-zeroflen.png">
 </head>
 <body>
@@ -51,6 +54,10 @@
                             <label for="show-country-toggle" class="toggle-label"></label>
                         </div>
                         <p class="toggle-description">Si activas esta opción, otros observadores verán tu bandera.</p>
+                    </div>
+                    <!-- Botón de Google Auth (nuevo) -->
+                    <div class="form-group google-auth">
+                        <button id="btn-google-login" class="btn-google">ENTRAR CON GOOGLE</button>
                     </div>
                     <div class="preview-section">
                         <p class="preview-label">VISTA PREVIA (Neon Breath):</p>
@@ -99,10 +106,10 @@
                 <div class="header">
                     <div>
                         <div class="header-title">⚡ ZEROFLEN</div>
-                        <div class="header-subtitle">Lobby v0.8</div>
+                        <div class="header-subtitle">Lobby v0.9</div>
                     </div>
                     <div class="badges">
-                        <div class="badge" id="version-badge">0.8-nucleus</div>
+                        <div class="badge" id="version-badge">0.9-centinela</div>
                         <div class="badge" id="timestamp-badge">--:--:--</div>
                     </div>
                 </div>
@@ -244,8 +251,13 @@
         </div>
     </div>
 
-    <!-- SCRIPTS -->
+    <!-- SCRIPTS (cargar en orden) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="database.js"></script>
+    <script src="centinel.js"></script>
+    <script src="auth.js"></script>
     <script src="script.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>
