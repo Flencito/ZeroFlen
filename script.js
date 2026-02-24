@@ -103,7 +103,7 @@
     // --------------------------------------------------------
     // Estado global (expuesto para otros módulos)
     // --------------------------------------------------------
-    window.currentObserver = null;
+    window.currentObserver = null; // { id, name, color, country, show_country, access_key }
     window.DOM = DOM;
 
     // --------------------------------------------------------
@@ -845,6 +845,10 @@
             localStorage.setItem('zeroflen-theme', this.selectedTheme);
             this.cerrar();
         }
+    }
+
+    function aplicarTema(themeId) {
+        document.documentElement.setAttribute('data-theme', themeId);
     }
 
     // --------------------------------------------------------
