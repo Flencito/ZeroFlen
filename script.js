@@ -1,6 +1,7 @@
 /**
  * ZeroFlen v0.9 - Módulo principal (Lobby, ranking, reproductor, comunidad)
  * Adaptado para usar database.js, centinel.js, auth.js y con integración de Google
+ * Versión con mejoras de tiempo real y actualización de perfil en móvil
  */
 
 (function() {
@@ -83,7 +84,7 @@
         miniProgressBar: document.getElementById('mini-progress-bar'),
         miniProgressTooltip: document.getElementById('mini-progress-tooltip'),
 
-        // Modales
+        // Modales (comunidad y temas ya existen en HTML)
         comunidadModal: document.getElementById('comunidad-modal'),
         temasModal: document.getElementById('temas-modal'),
         comunidadMensajes: document.getElementById('comunidad-mensajes'),
@@ -105,7 +106,7 @@
     let rankingManager = null;
     let nameValidator = null;
     let colorSelector = null;
-    let menuSidebar = null; // AÑADIDO: para poder actualizarlo globalmente
+    let menuSidebar = null; // MEJORA: guardar instancia del menú
 
     // --------------------------------------------------------
     // Reproductor global (MusicPlayer)
@@ -457,8 +458,7 @@
             window.currentObserver = observer;
             cerrarGatekeeper();
 
-            menuSidebar = new MenuSidebar(window.currentObserver); // AÑADIDO: asignar a variable global
-            window.menuSidebar = menuSidebar; // AÑADIDO: exponer globalmente
+            menuSidebar = new MenuSidebar(window.currentObserver); // guardar instancia
             await rankingManager.cargar_ranking();
 
         } catch (error) {
@@ -513,6 +513,7 @@
         }
 
         actualizar_observador_actual() {
+            if (!window.currentObserver) return;
             const obs = this.observers.find(o => o.name === window.currentObserver.name);
             if (obs) {
                 DOM.rankingCurrent.innerHTML = `
@@ -525,10 +526,15 @@
                     </div>
                 `;
             } else {
+                // MEJORA: mostrar datos aunque no esté en el ranking (por ejemplo, si es nuevo)
                 DOM.rankingCurrent.innerHTML = `
                     <p class="current-label">TÚ ERES:</p>
                     <p class="current-name breathe" style="color: ${window.currentObserver.color};">${window.currentObserver.name}</p>
-                    <div class="current-details"><p>Esperando datos...</p></div>
+                    <div class="current-details">
+                        <span class="current-country">${window.currentObserver.show_country ? window.currentObserver.country : '🔒'}</span>
+                        <p class="current-rank">Rango: Sin datos</p>
+                        <p class="current-accesses">Accesos: ${window.currentObserver.accesses || 0}</p>
+                    </div>
                 `;
             }
         }
@@ -725,7 +731,7 @@
     }
 
     // --------------------------------------------------------
-    // ComunidadModal (con centinel y tiempo real mejorado)
+    // ComunidadModal (con mejoras de tiempo real)
     // --------------------------------------------------------
     class ComunidadModal {
         constructor() {
@@ -761,7 +767,7 @@
         cerrar() {
             this.modal.classList.remove('visible');
             if (this.unsubscribe) {
-                this.unsubscribe();
+                this.unsubscribe.unsubscribe();
                 this.unsubscribe = null;
             }
         }
@@ -798,9 +804,9 @@
             this.mensajesContainer.scrollTop = this.mensajesContainer.scrollHeight;
         }
 
-        // AÑADIDO: Suscripción mejorada con logs y canal único
         suscribirse() {
-            const channelName = 'messages-channel-' + Date.now(); // nombre único
+            // MEJORA: usar un nombre de canal único y asegurar reconexión
+            const channelName = 'messages-channel-' + Date.now();
             this.unsubscribe = window.supabaseClient
                 .channel(channelName)
                 .on('postgres_changes', 
@@ -817,7 +823,9 @@
                             this.scrollAlFinal();
                         }
                     })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Suscripción comunidad:', status);
+                });
         }
 
         async enviarMensaje() {
@@ -846,6 +854,7 @@
                     ...nuevoMensaje,
                     observers: { name: window.currentObserver.name, color: window.currentObserver.color, country: window.currentObserver.country }
                 };
+                // MEJORA: agregar el mensaje localmente inmediatamente
                 this.agregarMensajeAlDOM(mensajeCompleto);
                 this.scrollAlFinal();
                 this.input.value = '';
@@ -857,7 +866,7 @@
     }
 
     // --------------------------------------------------------
-    // IdentidadModal (con cambio de nombre y actualización del menú)
+    // IdentidadModal (con cambio de nombre y actualización de menú)
     // --------------------------------------------------------
     class IdentidadModal {
         constructor() {
@@ -955,12 +964,11 @@
                 window.currentObserver.show_country = nuevoShowCountry;
                 localStorage.setItem('observer', JSON.stringify(window.currentObserver));
 
-                // Actualizar el perfil en el menú (AÑADIDO)
-                if (window.menuSidebar) {
-                    window.menuSidebar.actualizarPerfil();
+                // MEJORA: actualizar el menú y el ranking inmediatamente
+                if (menuSidebar) {
+                    menuSidebar.actualizarPerfil();
                 }
-
-                await rankingManager.cargar_ranking();
+                await rankingManager.cargar_ranking(); // recargar ranking para que aparezca el nuevo nombre
 
                 this.cerrar();
             } catch (error) {
@@ -1052,7 +1060,7 @@
     }
 
     // --------------------------------------------------------
-    // Menú Sidebar
+    // Menú Sidebar (con método actualizarPerfil público)
     // --------------------------------------------------------
     class MenuSidebar {
         constructor(observer) {
@@ -1221,8 +1229,7 @@
             DOM.btnEnter.addEventListener('click', acceder);
         }
 
-        menuSidebar = new MenuSidebar(window.currentObserver); // AÑADIDO: asignar a variable global
-        window.menuSidebar = menuSidebar; // AÑADIDO: exponer globalmente
+        menuSidebar = new MenuSidebar(window.currentObserver); // guardar instancia
 
         if (DOM.miniPlayerContainer && DOM.musicToggleBtn) {
             new MiniPlayerLobby();
